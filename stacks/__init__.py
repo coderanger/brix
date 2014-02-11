@@ -17,11 +17,14 @@
 #
 
 """Usage:
+  balanced-stacks [options] validate
+  balanced-stacks [options] show <name>
   balanced-stacks [options] sync
   balanced-stacks [options] update [<region>]
 
 -h --help                    show this help message and exit
 --version                    show program's version number and exit
+-q, --quiet                  minimal output
 --no-sync                    do not auto-sync before update
 
 Example:
@@ -29,9 +32,12 @@ balanced-stacks sync
 
 """
 
+from __future__ import print_function
+
 import collections
 import importlib
 import os
+import sys
 
 import boto
 import boto.cloudformation
@@ -58,15 +64,35 @@ class BalancedStacks(object):
         self.secret_access_key = os.environ.get('BALANCED_AWS_SECRET_ACCESS_KEY', os.environ.get('AWS_SECRET_ACCESS_KEY'))
         self.region = os.environ.get('BALANCED_AWS_REGION', 'us-west-2')
         self.cfn = boto.connect_cloudformation(self.access_key_id, self.secret_access_key)
-        self.templates = collections.OrderedDict()
+
+    def validate(self, quiet=False):
+        error = False
         for name in self.TEMPLATES:
-            self.templates[name] = self._load_template(name)
+            try:
+                self._load_template(name)().to_json()
+                if not quiet:
+                    print("{0} ok".format(name))
+            except Exception, e:
+                error = True
+                print("{0} error: {1}".format(name, e))
+        if error:
+            raise ValueError('Errors detected')
+
+    def show(self, name):
+        if name in self.TEMPLATES:
+            cls = self._load_template(name)
+        elif 'balanced_{0}'.format(name) in self.TEMPLATES:
+            cls = self._load_template('balanced_{0}'.format(name))
+        else:
+            raise ValueError('Unknown template {0}'.format(name))
+        print(cls().to_json())
 
     def sync(self):
+        self.validate(quiet=True)
         s3 = boto.connect_s3(self.access_key_id, self.secret_access_key)
         for name, cls in self.templates.iteritems():
             print('Uploading {0}'.format(name))
-            self._upload_template(s3, name, cls)
+            self._upload_template(s3, name, self._load_template(name))
 
     def update(self, region):
         region = region or self.region
@@ -111,12 +137,20 @@ class BalancedStacks(object):
 def main():
     args = docopt.docopt(__doc__, version='balanced-stacks')
     app = BalancedStacks()
-    if args['sync']:
-        app.sync()
-    elif args['update']:
-        if not args['--no-sync']:
+    try:
+        if args['validate']:
+            app.validate(quiet=args['--quiet'])
+        elif args['show']:
+            app.show(args['<name>'])
+        elif args['sync']:
             app.sync()
-        app.update(args['<region>'])
+        elif args['update']:
+            if not args['--no-sync']:
+                app.sync()
+            app.update(args['<region>'])
+    except ValueError, e:
+        print(e.message, file=sys.stderr)
+        sys.exit(1)
 
 
 
