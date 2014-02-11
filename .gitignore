@@ -1,3 +1,7 @@
 packer/validation.pem
 packer/balanced-aws.crt
 packer/balanced-aws.key
+*.egg-info
+*.pyc
+build/
+dist/
