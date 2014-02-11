@@ -20,6 +20,7 @@ from troposphere import FindInMap, GetAtt, Join, Ref
 
 from .base import Template
 
+
 def FindInRegionMap(map, key):
     """Helper to do a lookup in a region-based mapping."""
     return FindInMap(map, Ref('AWS::Region'), key)
@@ -32,72 +33,49 @@ class BalancedRegionTemplate(Template):
         # We don't have one of these, we are the alpha and the omega
         return None
 
+    def param_Ip(self):
+        """Second octet to use for VPC subnets."""
+        return {'Type': 'String', 'Default': '5'}
+
+    SUBNETS = {
+        'Vpc': '10.{0}.0.0/16',
+        'GatewayA': '10.{0}.0.0/28',
+        'GatewayB': '10.{0}.0.16/28',
+        'GatewayC': '10.{0}.0.32/28',
+        'ProductionA': '10.{0}.16.0/20',
+        'ProductionB': '10.{0}.32.0/20',
+        'ProductionC': '10.{0}.64.0/20',
+        'TestA': '10.{0}.80.0/20',
+        'TestB': '10.{0}.96.0/20',
+        'TestC': '10.{0}.112.0/20',
+        'MiscA': '10.{0}.128.0/20',
+        'MiscB': '10.{0}.144.0/20',
+        'MiscC': '10.{0}.160.0/20',
+    }
+
+    def FindSubnet(self, key):
+        head, tail = self.SUBNETS[key].split('{0}')
+        return Join('', [head, Ref(self.param_Ip()), tail])
+
     def map_RegionMap(self):
         return {
             'us-west-1': {
-                'VpcCidr': '10.5.0.0/16',
-                'GatewayCidrA': '10.5.0.0/28',
-                'GatewayCidrB': '10.5.0.16/28',
-                'GatewayCidrC': '10.5.0.32/28',
                 'GatewayAmiId': 'ami-d69aad93',
-                'AmiId': 'ami-a8f5c8ed',
+                'AmiId': 'ami-56b28f13',
             },
             'us-west-2': {
-                'VpcCidr': '10.6.0.0/16',
-                'GatewayCidrA': '10.6.0.0/28',
-                'GatewayCidrB': '10.6.0.16/28',
-                'GatewayCidrC': '10.6.0.32/28',
                 'GatewayAmiId': 'ami-f032acc0',
-                'AmiId': 'ami-9a97f4aa',
-            }
-        }
-
-    def map_ProductionMap(self):
-        return {
-            'us-west-1': {
-                'CidrA': '10.5.16.0/20',
-                'CidrB': '10.5.32.0/20',
-                'CidrC': '10.5.64.0/20',
+                'AmiId': 'ami-ec7012dc',
             },
-            'us-west-2': {
-                'CidrA': '10.6.16.0/20',
-                'CidrB': '10.6.32.0/20',
-                'CidrC': '10.6.64.0/20',
-            },
-        }
-
-    def map_TestMap(self):
-        return {
-            'us-west-1': {
-                'CidrA': '10.5.80.0/20',
-                'CidrB': '10.5.96.0/20',
-                'CidrC': '10.5.112.0/20',
-            },
-            'us-west-2': {
-                'CidrA': '10.6.80.0/20',
-                'CidrB': '10.6.96.0/20',
-                'CidrC': '10.6.112.0/20',
-            },
-        }
-
-    def map_MiscMap(self):
-        return {
-            'us-west-1': {
-                'CidrA': '10.5.128.0/20',
-                'CidrB': '10.5.144.0/20',
-                'CidrC': '10.5.160.0/20',
-            },
-            'us-west-2': {
-                'CidrA': '10.6.128.0/20',
-                'CidrB': '10.6.144.0/20',
-                'CidrC': '10.6.160.0/20',
+            'us-east-1': {
+                'AmiId': 'ami-6394ae0a', # For the future
             },
         }
 
     def vpc(self):
         """VPC for this region."""
         return {
-            'CidrBlock': FindInRegionMap(self.map_RegionMap(), 'VpcCidr'),
+            'CidrBlock': self.FindSubnet('Vpc'),
         }
 
     def ig(self):
@@ -133,10 +111,10 @@ class BalancedRegionTemplate(Template):
             'Parameters': {
                 'PublicRouteTableId': Ref(self.rtb()),
                 'AvailabilityZone': Join('', [Ref('AWS::Region'), zone_id.lower()]),
-                'GatewayCidr': FindInRegionMap(self.map_RegionMap(), 'GatewayCidr'+zone_id),
-                'ProductionCidr': FindInRegionMap(self.map_ProductionMap(), 'Cidr'+zone_id),
-                'TestCidr': FindInRegionMap(self.map_TestMap(), 'Cidr'+zone_id),
-                'MiscCidr': FindInRegionMap(self.map_MiscMap(), 'Cidr'+zone_id),
+                'GatewayCidr': self.FindSubnet('Gateway{0}'.format(zone_id)),
+                'ProductionCidr': self.FindSubnet('Production{0}'.format(zone_id)),
+                'TestCidr': self.FindSubnet('Test{0}'.format(zone_id)),
+                'MiscCidr': self.FindSubnet('Misc{0}'.format(zone_id)),
                 'GatewayAmiId': FindInRegionMap(self.map_RegionMap(), 'GatewayAmiId'),
             },
             'DependsOn': self.vga(),
