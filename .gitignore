@@ -1,0 +1,3 @@
+packer/validation.pem
+packer/balanced-aws.crt
+packer/balanced-aws.key

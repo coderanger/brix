@@ -15,14 +15,15 @@
       "account_id": "{{user `aws_account_id`}}",
       "s3_bucket": "{{user `s3_bucket`}}",
       "region": "us-east-1",
+      "ami_regions": ["us-west-1", "us-west-2"],
       "source_ami": "ami-23447f4a",
       "instance_type": "m1.small",
       "ssh_username": "ubuntu",
       "ami_name": "Balanced Ubuntu 12.04 (instance store) {{isotime | clean_ami_name}}",
       "x509_cert_path": "{{user `x509_cert_path`}}",
       "x509_key_path": "{{user `x509_key_path`}}",
-      "bundle_upload_command": "sudo EC2_AMITOOL_HOME=/opt/ec2-ami-tools -n /opt/ec2-ami-tools/bin/ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --location {{.Region}} --retry",
-      "bundle_vol_command": "sudo EC2_AMITOOL_HOME=/opt/ec2-ami-tools -n /opt/ec2-ami-tools/bin/ec2-bundle-vol -k {{.KeyPath}} -u {{.AccountId}} -c {{.CertPath}} -r {{.Architecture}} -e {{.PrivatePath}}/* -d {{.Destination}} -p {{.Prefix}} --batch --no-filter"
+      "bundle_upload_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --location {{.Region}} --retry",
+      "bundle_vol_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-bundle-vol -k {{.KeyPath}} -u {{.AccountId}} -c {{.CertPath}} -r {{.Architecture}} -e {{.PrivatePath}}/* -d {{.Destination}} -p {{.Prefix}} --batch --no-filter"
     }
   ],
   "provisioners": [
@@ -30,16 +31,22 @@
       "type": "shell",
       "inline": [
         "set -e -x",
-        "sleep 60 # Wait for init scripts et al to finish",
-        "sudo apt-get update -y",
-        "sudo apt-get install -y unzip",
-        "curl -L https://www.opscode.com/chef/install.sh | sudo bash",
-        "curl -o /tmp/ec2-ami-tools.zip http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools.zip",
-        "unzip -d /tmp /tmp/ec2-ami-tools.zip",
-        "rm /tmp/ec2-ami-tools.zip",
-        "mkdir /opt/ec2-ami-tools",
-        "mv /tmp/ec2-ami-tools*/* /opt/ec2-ami-tools"
+        "sleep 60 # Wait for init scripts et al to finish"
       ]
+    },
+    {
+      "type": "file",
+      "source": "validation.pem",
+      "destination": "/tmp/validation.pem"
+    },
+    {
+      "type": "file",
+      "source": "client.rb",
+      "destination": "/tmp/client.rb"
+    },
+    {
+      "type": "shell",
+      "script": "init.sh"
     }
   ]
 }
