@@ -61,14 +61,14 @@ class BalancedRegionTemplate(Template):
         return {
             'us-west-1': {
                 'GatewayAmiId': 'ami-d69aad93',
-                'AmiId': 'ami-56b28f13',
+                'AmiId': 'ami-449ca101',
             },
             'us-west-2': {
                 'GatewayAmiId': 'ami-f032acc0',
-                'AmiId': 'ami-ec7012dc',
+                'AmiId': 'ami-e65331d6',
             },
             'us-east-1': {
-                'AmiId': 'ami-6394ae0a', # For the future
+                'AmiId': 'ami-85080dec', # For the future
             },
         }
 
