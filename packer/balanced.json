@@ -45,6 +45,11 @@
       "destination": "/tmp/client.rb"
     },
     {
+      "type": "file",
+      "source": "bootstrap.sh",
+      "destination": "/tmp/bootstrap.sh"
+    },
+    {
       "type": "shell",
       "script": "init.sh"
     }
