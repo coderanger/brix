@@ -182,8 +182,6 @@ class LaunchConfiguration(stratosphere.autoscaling.LaunchConfiguration):
         self._chef_role = kwargs.pop('ChefRole')
         self._chef_env = kwargs.pop('ChefEnv')
         self._name_tag = kwargs.pop('NameTag', self._chef_role)
-        if 'Metadata' not in kwargs:
-            kwargs['Metadata'] = self.Metadata()
         super(LaunchConfiguration, self).__init__(*args, **kwargs)
 
     def IamInstanceProfile(self):
