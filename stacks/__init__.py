@@ -18,14 +18,20 @@
 
 """Usage:
   balanced-stacks [options] validate
+  balanced-stacks [options] list
   balanced-stacks [options] show <name>
   balanced-stacks [options] sync
-  balanced-stacks [options] update [<region>]
+  balanced-stacks [options] update [--no-sync] [--ip=NUMBER] [--key=KEY]
+  balanced-stacks [options] events [--no-recurse] <stack>
 
 -h --help                    show this help message and exit
 --version                    show program's version number and exit
 -q, --quiet                  minimal output
+--region=REGION              AWS region [default: us-west-1]
 --no-sync                    do not auto-sync before update
+--ip=NUMBER                  second octet to use for the VPC [default: 5]
+--key=KEY                    EC2 SSH key name [default: cloudformation]
+--no-recurse                 do not process sub-stacks
 
 Example:
 balanced-stacks sync
@@ -34,7 +40,6 @@ balanced-stacks sync
 
 from __future__ import print_function
 
-import collections
 import importlib
 import os
 import sys
@@ -62,7 +67,6 @@ class BalancedStacks(object):
     def __init__(self):
         self.access_key_id = os.environ.get('BALANCED_AWS_ACCESS_KEY_ID', os.environ.get('AWS_ACCESS_KEY_ID'))
         self.secret_access_key = os.environ.get('BALANCED_AWS_SECRET_ACCESS_KEY', os.environ.get('AWS_SECRET_ACCESS_KEY'))
-        self.region = os.environ.get('BALANCED_AWS_REGION', 'us-west-2')
         self.cfn = boto.connect_cloudformation(self.access_key_id, self.secret_access_key)
 
     def validate(self, quiet=False):
@@ -94,14 +98,15 @@ class BalancedStacks(object):
             print('Uploading {0}'.format(name))
             self._upload_template(s3, name, self._load_template(name))
 
+    def list(self, region):
+        cfn = self._cfn(region)
+        for stack in self._cfn_iterate(lambda t: cfn.list_stacks(next_token=t)):
+            if stack.stack_status == 'DELETE_COMPLETE':
+                continue
+            print('{0.stack_name}: {0.template_description}'.format(stack))
+
     def update(self, region):
-        region = region or self.region
-        for r in boto.cloudformation.regions():
-            if r.name == region:
-                break
-        else:
-            raise ValueError('Unknown region {0}'.format(region))
-        cfn = boto.connect_cloudformation(self.access_key_id, self.secret_access_key, region=r)
+        cfn = self._cfn(region)
         try:
             cfn.describe_stacks('BalancedRegion')
             operation = 'update_stack'
@@ -116,6 +121,33 @@ class BalancedStacks(object):
             template_url='https://balanced-cfn-{0}.s3.amazonaws.com/templates/balanced_region.json'.format(region),
             capabilities=['CAPABILITY_IAM'],
             **kwargs)
+
+    def events(self, region, stack, recurse=True):
+        cfn = self._cfn(region)
+        stacks = []
+        if recurse:
+            # Find all sub-stacks
+            pending = [stack]
+            while pending:
+                s = pending.pop()
+                stacks.append(s)
+                for res in cfn.describe_stack_resources(s):
+                    if res.resource_type == 'AWS::CloudFormation::Stack':
+                        pending.append(res.stack_name)
+
+        else:
+            stacks.append(stack)
+        events = []
+        for stack in stacks:
+            for event in self._cfn_iterate(lambda t: cfn.describe_stack_events(stack, next_token=t)):
+                events.append(event)
+        for event in sorted(events, key=lambda event: event.timestamp):
+            fmt = '{2} '
+            if len(stacks) > 1:
+                fmt += '[{0.stack_name}]\t'
+            fmt += '{0.logical_resource_id}: {0.resource_status} {1}'
+            print(fmt.format(event, event.resource_status_reason or '', event.timestamp.replace(microsecond=0)))
+
 
     def _load_template(self, name):
         """Given a module name, return the template class."""
@@ -133,6 +165,24 @@ class BalancedStacks(object):
             key = bucket.get_key('templates/{0}.json'.format(name), validate=False)
             key.set_contents_from_string(json)
 
+    def _cfn(self, region):
+        for r in boto.cloudformation.regions():
+            if r.name == region:
+                break
+        else:
+            raise ValueError('Unknown region {0}'.format(region))
+        return boto.connect_cloudformation(self.access_key_id, self.secret_access_key, region=r)
+
+    def _cfn_iterate(self, fn):
+        first = True
+        next_token = None
+        while next_token or first:
+            objs = fn(next_token)
+            for obj in objs:
+                yield obj # My kingdom for a yield from
+            first = False
+            next_token = objs.next_token
+
 
 def main():
     args = docopt.docopt(__doc__, version='balanced-stacks')
@@ -144,10 +194,14 @@ def main():
             app.show(args['<name>'])
         elif args['sync']:
             app.sync()
+        elif args['list']:
+            app.list(args['--region'])
         elif args['update']:
             if not args['--no-sync']:
                 app.sync()
-            app.update(args['<region>'])
+            app.update(args['--region'])
+        elif args['events']:
+            app.events(args['--region'], args['<stack>'] or 'BalancedRegion', not args['--no-recurse'])
     except ValueError, e:
         print(e.message, file=sys.stderr)
         sys.exit(1)
