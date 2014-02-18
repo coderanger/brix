@@ -199,58 +199,9 @@ class LaunchConfiguration(stratosphere.autoscaling.LaunchConfiguration):
 
     def UserData(self):
         return Base64(Join('', [
-            '#!/bin/bash -vxe\n',
-            'apt-get --yes update\n'
-            'apt-get --yes install python-pip\n'
-            'pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n'
-            'cfn-init',
-                ' --stack ', Ref('AWS::StackName'),
-                ' --resource ', self.name,
-                ' --region ', Ref('AWS::Region'),
-            '\n',
+            '#!/bin/bash -xe\n',
+            '/opt/bootstrap.sh "', self._name_tag, '" "', self._chef_env, '" "',  self._chef_role, '"\n',
         ]))
-
-    def Metadata(self):
-        return {
-            'AWS::CloudFormation::Authentication': {
-                'S3AccessCreds' : {
-                    'type': 'S3',
-                    'buckets': ['balanced.confucius'],
-                    'roleName': 'balanced-api',
-                }
-            },
-            'AWS::CloudFormation::Init': {
-                'configSets': {
-                    'default': ['dependencies', 'bootstrap']
-                },
-                'dependencies': {
-                    'packages': {
-                        'python': {
-                            'awscli': []
-                        }
-                    },
-                    'sources' : {
-                        '/opt/confucius': Join('', [
-                            'https://balanced-cfn-',
-                            Ref('AWS::Region'),
-                            '.s3.amazonaws.com/chef-v1.tar.gz',
-                        ])
-                    },
-                },
-                'bootstrap': {
-                    'commands': {
-                        'chef': {
-                            'command': Join('', [
-                                '/opt/confucius/bootstrap.sh',
-                                ' --role ', self._chef_role,
-                                ' --env ', self._chef_env,
-                                ' --tag ', self._name_tag,
-                            ]),
-                        }
-                    }
-                }
-            }
-        }
 
 
 class AutoScalingGroup(stratosphere.autoscaling.AutoScalingGroup):
