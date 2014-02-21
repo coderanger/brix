@@ -42,12 +42,12 @@ setup(
         'Programming Language :: Python',
     ],
     zip_safe = False,
-    install_requires = ['stratosphere', 'boto', 'docopt'],
+    install_requires = ['stratosphere', 'boto', 'invoke'],
     tests_require = ['pytest', 'pretend', 'flake8'],
     cmdclass = {'test': PyTest},
     entry_points = {
         'console_scripts': [
-            'balanced-stacks = stacks:main',
+            'brix = brix:main',
         ],
     }
 )
