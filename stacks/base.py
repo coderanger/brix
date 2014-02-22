@@ -257,7 +257,7 @@ class Stack(stratosphere.cloudformation.Stack):
 
     def TemplateURL(self):
         if self._template_name:
-            if self._template_name not in self.TEMPLATES:
+            if 'sha1' not in self.TEMPLATES.get(self._template_name, {}):
                 raise ValueError('Unknown template {}'.format(self._template_name))
             return Join('', [
                 'https://balanced-cfn-',

@@ -45,6 +45,7 @@ import hashlib
 import importlib
 import os
 import sys
+import traceback
 
 import boto
 import boto.cloudformation
@@ -54,10 +55,10 @@ import troposphere
 
 class Brix(object):
     TEMPLATES = [
-        'balanced_docs',
-        'balanced_gateway',
-        'balanced_az',
         'balanced_region',
+        'balanced_az',
+        'balanced_gateway',
+        'balanced_docs',
     ]
 
     REGIONS = [
@@ -77,7 +78,7 @@ class Brix(object):
         for name, data in self.templates.iteritems():
             if 'error' in data:
                 error = True
-                print("{} error: {}".format(name, data['error']))
+                print("{} error: {}".format(name, data['error'][1]))
             elif not quiet:
                 print("{0} ok".format(name))
         if error:
@@ -85,7 +86,9 @@ class Brix(object):
 
     def show(self, name):
         data = self.templates.get(name, self.templates.get('balanced_{}'.format(name)))
-        if data:
+        if data.get('error'):
+            print(''.join(traceback.format_exception(*data['error'])), file=sys.stderr)
+        elif data.get('json'):
             print(data['json'])
         else:
             raise ValueError('Unknown template {}'.format(name))
@@ -96,13 +99,6 @@ class Brix(object):
         for name in self.templates:
             print('Uploading {}'.format(name))
             self._upload_template(s3, name)
-
-    def list(self, region):
-        cfn = self._cfn(region)
-        for stack in self._cfn_iterate(lambda t: cfn.list_stacks(next_token=t)):
-            if stack.stack_status == 'DELETE_COMPLETE':
-                continue
-            print('{0.stack_name}: {0.template_description}'.format(stack))
 
     def update(self, region, template_name, stack_name, params={}):
         cfn = self._cfn(region)
@@ -128,6 +124,13 @@ class Brix(object):
             capabilities=['CAPABILITY_IAM'],
             parameters=params.items(),
             **kwargs)
+
+    def list(self, region):
+        cfn = self._cfn(region)
+        for stack in self._cfn_iterate(lambda t: cfn.list_stacks(next_token=t)):
+            if stack.stack_status == 'DELETE_COMPLETE':
+                continue
+            print('{0.stack_name}: {0.template_description}'.format(stack))
 
     def events(self, region, stack, recurse=True):
         cfn = self._cfn(region)
@@ -157,21 +160,21 @@ class Brix(object):
 
     def _load_templates(self):
         """Load all known templates and compute some data about them."""
-        templates = collections.OrderedDict()
+        templates = {}
         # HAXXXXXX :-(
         import stacks.base
         stacks.base.Stack.TEMPLATES = templates
-        for name in self.TEMPLATES:
+        for name in reversed(self.TEMPLATES):
             template_data = {'name': name}
             try:
                 template_data['class'] = self._load_template(name)
                 template_data['json'] = template_data['class']().to_json()
                 template_data['sha1'] = hashlib.sha1(template_data['json']).hexdigest()
                 template_data['s3_key'] = 'templates/{}-{}.json'.format(name, template_data['sha1'])
-            except Exception, e:
-                template_data['error'] = e
+            except Exception:
+                template_data['error'] = sys.exc_info()
             templates[name] = template_data
-        return templates
+        return collections.OrderedDict((name, templates[name]) for name in self.TEMPLATES)
 
     def _load_template(self, name):
         """Given a module name, return the template class."""
