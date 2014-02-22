@@ -247,6 +247,9 @@ class AutoScalingGroup(stratosphere.autoscaling.AutoScalingGroup):
 
 
 class Stack(stratosphere.cloudformation.Stack):
+    # Find a better way to do this
+    TEMPLATES = {}
+
     def __init__(self, *args, **kwargs):
         self._parameters = kwargs.pop('Parameters', {})
         self._template_name = kwargs.pop('TemplateName', None)
@@ -254,10 +257,12 @@ class Stack(stratosphere.cloudformation.Stack):
 
     def TemplateURL(self):
         if self._template_name:
+            if self._template_name not in self.TEMPLATES:
+                raise ValueError('Unknown template {}'.format(self._template_name))
             return Join('', [
                 'https://balanced-cfn-',
                 Ref('AWS::Region'),
-                '.s3.amazonaws.com/templates/{0}.json'.format(self._template_name),
+                '.s3.amazonaws.com/templates/{}-{}.json'.format(self._template_name, self.TEMPLATES[self._template_name]['sha1']),
             ])
 
     def Parameters(self):

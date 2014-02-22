@@ -42,7 +42,7 @@ setup(
         'Programming Language :: Python',
     ],
     zip_safe = False,
-    install_requires = ['stratosphere', 'boto', 'invoke'],
+    install_requires = ['stratosphere', 'boto', 'docopt'],
     tests_require = ['pytest', 'pretend', 'flake8'],
     cmdclass = {'test': PyTest},
     entry_points = {
