@@ -17,6 +17,7 @@
 #
 
 from troposphere import Join, Ref
+from troposphere.ec2 import NetworkInterfaceProperty
 
 import stratosphere
 
@@ -39,12 +40,12 @@ class GatewayInstance(stratosphere.ec2.Instance):
         return Ref(self.template.param_KeyName())
 
     def NetworkInterfaces(self):
-        return [{
-            'AssociatePublicIpAddress': True,
-            'DeviceIndex': '0',
-            'GroupSet': [Ref(self.template.sg())],
-            'SubnetId': Ref(self.template.subnet()),
-        }]
+        return [NetworkInterfaceProperty(
+            AssociatePublicIpAddress=True,
+            DeviceIndex='0',
+            GroupSet=[Ref(self.template.sg())],
+            SubnetId=Ref(self.template.subnet()),
+        )]
 
     def SourceDestCheck(self):
         return False
