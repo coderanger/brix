@@ -42,10 +42,20 @@ sudo chown -R root:root /opt/ec2-ami-tools
 
 # Configure Chef
 sudo mkdir /etc/chef
-sudo mv /tmp/validation.pem /tmp/client.rb /etc/chef
 sudo chown -R root:root /etc/chef
 sudo chmod 700 /etc/chef
-sudo chmod 600 /etc/chef/validation.pem /etc/chef/client.rb
+if [ -f /tmp/validation.pem ]; then
+  sudo mv /tmp/validation.pem /etc/chef
+  sudo chmod 600 /etc/chef/validation.pem
+fi
+if [ -f /tmp/client.rb ]; then
+  sudo mv /tmp/client.rb /etc/chef
+  sudo chmod 600 /etc/chef/client.rb
+fi
+if [ -f /tmp/solo.rb ]; then
+  sudo mv /tmp/solo.rb /etc/chef
+  sudo chmod 600 /etc/chef/solo.rb
+fi
 
 # Ohai hints
 sudo mkdir /etc/chef/ohai
@@ -58,10 +68,3 @@ sudo chmod 600 /etc/chef/ohai/hints/ec2.json
 sudo mv /tmp/bootstrap.sh /opt
 sudo chown root:root /opt/bootstrap.sh
 sudo chmod 744 /opt/bootstrap.sh
-
-# Configure network search path
-for file in /etc/network/interfaces.d/*.cfg; do
-  if ! grep -q dns-search "$file"; then
-    echo "  dns-search vandelay.io" | sudo tee -a $file
-  fi
-done

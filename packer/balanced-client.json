@@ -19,7 +19,7 @@
       "source_ami": "ami-23447f4a",
       "instance_type": "m1.small",
       "ssh_username": "ubuntu",
-      "ami_name": "Balanced Ubuntu 12.04 (instance store) {{isotime | clean_ami_name}}",
+      "ami_name": "Balanced Chef-Client Ubuntu 12.04 (instance store) {{isotime | clean_ami_name}}",
       "x509_cert_path": "{{user `x509_cert_path`}}",
       "x509_key_path": "{{user `x509_key_path`}}",
       "bundle_upload_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --location {{.Region}} --retry",
@@ -46,7 +46,7 @@
     },
     {
       "type": "file",
-      "source": "bootstrap.sh",
+      "source": "client-bootstrap.sh",
       "destination": "/tmp/bootstrap.sh"
     },
     {

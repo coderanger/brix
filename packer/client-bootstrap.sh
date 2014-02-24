@@ -30,7 +30,7 @@ hostname "$HOSTNAME"
 
 # Write Chef first-boot JSON
 cat > /etc/chef/first-boot.json <<EOP
-{"run_list":["recipe[role-base]", "recipe["$ROLE"]}
+{"run_list":["recipe[role-base]", "recipe[$ROLE]"]}
 EOP
 
 # Run Chef
