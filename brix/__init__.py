@@ -184,8 +184,8 @@ class Brix(object):
         # Who wants to bet this long string of __getitem__'s will break eventually?
         stack_template = self.cfn.get_template(stack_name)['GetTemplateResponse']['GetTemplateResult']['TemplateBody']
         # Reparse to normalize spacing
-        stack_template = json.dumps(json.loads(stack_template, object_pairs_hook=collections.OrderedDict), indent=2)
-        template = self._get_template(template_name)['class']().to_json(indent=2)
+        stack_template = json.dumps(json.loads(stack_template, object_pairs_hook=collections.OrderedDict), indent=4)
+        template = self._get_template(template_name)['json']
         for line in difflib.unified_diff(stack_template.splitlines(), template.splitlines(), fromfile=stack_name, tofile=template_name, lineterm=''):
             print(line)
 
