@@ -96,13 +96,11 @@ class Brix(object):
             raise ValueError('Errors detected')
 
     def show(self, name):
-        data = self.templates.get(name, self.templates.get('balanced_{}'.format(name)))
-        if data.get('error'):
+        data = self._get_template(name)
+        if'error' in data:
             print(''.join(traceback.format_exception(*data['error'])), file=sys.stderr)
-        elif data.get('json'):
-            print(data['json'])
         else:
-            raise ValueError('Unknown template {}'.format(name))
+            print(data['json'])
 
     def sync(self):
         self.validate(quiet=True) # Make sure all templates are good
@@ -133,9 +131,7 @@ class Brix(object):
         if not template_name:
             raise ValueError('Template name for stack {} is required'.format(stack_name))
         print()
-        data = self.templates.get(template_name)
-        if data:
-            raise ValueError('Unknown template {}'.format(template_name))
+        data = self._get_template(template_name)
         getattr(self.cfn, operation)(
             stack_name=stack_name,
             template_url='https://balanced-cfn-{}.s3.amazonaws.com/{}'.format(region, data['s3_key']),
