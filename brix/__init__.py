@@ -18,10 +18,11 @@
 
 """Usage:
   brix [options] validate
-  brix [options] list
   brix [options] show <name>
   brix [options] sync
-  brix [options] update [--no-sync --ip=NUMBER --key=KEY --param=KEY:VALUE...] <template_name> <stack_name>
+  brix [options] update [--no-sync --param=KEY:VALUE...] <stack> [<template>]
+  brix [options] diff <stack> [<template>]
+  brix [options] stacks
   brix [options] events [--no-recurse] <stack>
 
 -h --help                    show this help message and exit
@@ -29,8 +30,7 @@
 -q, --quiet                  minimal output
 --region=REGION              AWS region [default: us-west-1]
 --no-sync                    do not auto-sync before update
---ip=NUMBER                  second octet to use for the VPC [default: 5]
---key=KEY                    EC2 SSH key name [default: cloudformation]
+--param=KEY:VALUE            parameters to pass to the stack
 --no-recurse                 do not process sub-stacks
 
 Example:
@@ -41,8 +41,10 @@ brix sync
 from __future__ import print_function
 
 import collections
+import difflib
 import hashlib
 import importlib
+import json
 import os
 import sys
 import traceback
@@ -67,10 +69,19 @@ class Brix(object):
         'us-west-2',
     ]
 
-    def __init__(self):
+    def __init__(self, region):
+        # TODO: Allow configuring these on the command line
         self.access_key_id = os.environ.get('BALANCED_AWS_ACCESS_KEY_ID', os.environ.get('AWS_ACCESS_KEY_ID'))
         self.secret_access_key = os.environ.get('BALANCED_AWS_SECRET_ACCESS_KEY', os.environ.get('AWS_SECRET_ACCESS_KEY'))
-        self.cfn = boto.connect_cloudformation(self.access_key_id, self.secret_access_key)
+        # Connect to the right CloudFormation region
+        for r in boto.cloudformation.regions():
+            if r.name == region:
+                break
+        else:
+            raise ValueError('Unknown region {0}'.format(region))
+        self.cfn = boto.connect_cloudformation(self.access_key_id, self.secret_access_key, region=r)
+        self.s3 = boto.connect_s3(self.access_key_id, self.secret_access_key)
+        # Load and render all templates
         self.templates = self._load_templates()
 
     def validate(self, quiet=False):
@@ -97,43 +108,49 @@ class Brix(object):
         self.validate(quiet=True) # Make sure all templates are good
         s3 = boto.connect_s3(self.access_key_id, self.secret_access_key)
         for name in self.templates:
-            print('Uploading {}'.format(name))
-            self._upload_template(s3, name)
+            print('Uploading {}'.format(name), end='')
+            for region in self.REGIONS:
+                bucket = conn.get_bucket('balanced-cfn-{0}'.format(region))
+                key = bucket.get_key(self.templates[name]['s3_key'], validate=False)
+                key.set_contents_from_string(self.templates[name]['json'])
 
-    def update(self, region, template_name, stack_name, params={}):
-        cfn = self._cfn(region)
-        data = self.templates.get(template_name)
-        if data:
-            raise ValueError('Unknown template {}'.format(template_name))
+    def update(self, stack_name, template_name=None, params={}):
         try:
-            stack = cfn.describe_stacks(stack_name)[0]
+            stack = self.cfn.describe_stacks(stack_name)[0]
             operation = 'update_stack'
             kwargs = {}
             if stack.parameters:
                 existing_params = {p.key: p.value for p in stack.parameters}
                 existing_params.update(params)
                 params = existing_params
+            if not template_name:
+                template_name = stack.tags.get('TemplateName')
             print('Updating stack {} in {}'.format(stack_name, region))
         except boto.exception.BotoServerError:
             operation = 'create_stack'
-            kwargs = {'disable_rollback': True}
+            kwargs = {'disable_rollback': True, 'tags': {'TemplateName': template_name}}
             print('Creating stack {} in {}'.format(stack_name, region))
-        getattr(cfn, operation)(
+        if not template_name:
+            raise ValueError('Template name for stack {} is required'.format(stack_name))
+        print()
+        data = self.templates.get(template_name)
+        if data:
+            raise ValueError('Unknown template {}'.format(template_name))
+        getattr(self.cfn, operation)(
             stack_name=stack_name,
             template_url='https://balanced-cfn-{}.s3.amazonaws.com/{}'.format(region, data['s3_key']),
             capabilities=['CAPABILITY_IAM'],
             parameters=params.items(),
             **kwargs)
 
-    def list(self, region):
-        cfn = self._cfn(region)
-        for stack in self._cfn_iterate(lambda t: cfn.list_stacks(next_token=t)):
+    def stacks(self):
+        """List all stacks in the region."""
+        for stack in self._cfn_iterate(lambda t: self.cfn.list_stacks(next_token=t)):
             if stack.stack_status == 'DELETE_COMPLETE':
                 continue
             print('{0.stack_name}: {0.template_description}'.format(stack))
 
-    def events(self, region, stack, recurse=True):
-        cfn = self._cfn(region)
+    def events(self, stack, recurse=True):
         stacks = []
         if recurse:
             # Find all sub-stacks
@@ -141,7 +158,7 @@ class Brix(object):
             while pending:
                 s = pending.pop()
                 stacks.append(s)
-                for res in cfn.describe_stack_resources(s):
+                for res in self.cfn.describe_stack_resources(s):
                     if res.resource_type == 'AWS::CloudFormation::Stack':
                         pending.append(res.stack_name)
 
@@ -149,7 +166,7 @@ class Brix(object):
             stacks.append(stack)
         events = []
         for stack in stacks:
-            for event in self._cfn_iterate(lambda t: cfn.describe_stack_events(stack, next_token=t)):
+            for event in self._cfn_iterate(lambda t: self.cfn.describe_stack_events(stack, next_token=t)):
                 events.append(event)
         for event in sorted(events, key=lambda event: event.timestamp):
             fmt = '{2} '
@@ -157,6 +174,20 @@ class Brix(object):
                 fmt += '[{0.stack_name}]\t'
             fmt += '{0.logical_resource_id}: {0.resource_status} {1}'
             print(fmt.format(event, event.resource_status_reason or '', event.timestamp.replace(microsecond=0)))
+
+    def diff(self, stack_name, template_name):
+        if not template_name:
+            stack = self.cfn.describe_stacks(stack_name)[0]
+            template_name = stack.tags.get('TemplateName')
+        if not template_name:
+            raise ValueError('Template name for stack {} is required'.format(stack_name))
+        # Who wants to bet this long string of __getitem__'s will break eventually?
+        stack_template = self.cfn.get_template(stack_name)['GetTemplateResponse']['GetTemplateResult']['TemplateBody']
+        # Reparse to normalize spacing
+        stack_template = json.dumps(json.loads(stack_template, object_pairs_hook=collections.OrderedDict), indent=2)
+        template = self._get_template(template_name)['class']().to_json(indent=2)
+        for line in difflib.unified_diff(stack_template.splitlines(), template.splitlines(), fromfile=stack_name, tofile=template_name, lineterm=''):
+            print(line)
 
     def _load_templates(self):
         """Load all known templates and compute some data about them."""
@@ -184,20 +215,14 @@ class Brix(object):
             if isinstance(value, type) and issubclass(value, troposphere.Template) and not key[0] == '_' and key != 'Template':
                 return value
 
-    def _upload_template(self, conn, name):
-        """Upload a template for all regions."""
-        for region in self.REGIONS:
-            bucket = conn.get_bucket('balanced-cfn-{0}'.format(region))
-            key = bucket.get_key(self.templates[name]['s3_key'], validate=False)
-            key.set_contents_from_string(self.templates[name]['json'])
-
-    def _cfn(self, region):
-        for r in boto.cloudformation.regions():
-            if r.name == region:
-                break
+    def _get_template(self, name):
+        """Return the data for a given template name."""
+        if name in self.templates:
+            return self.templates[name]
+        elif 'balanced_{}'.format(name) in self.templates:
+            return self.templates['balanced_{}'.format(name)]
         else:
-            raise ValueError('Unknown region {0}'.format(region))
-        return boto.connect_cloudformation(self.access_key_id, self.secret_access_key, region=r)
+            raise ValueError('Unknown template {}'.format(template_name))
 
     def _cfn_iterate(self, fn):
         first = True
@@ -212,7 +237,7 @@ class Brix(object):
 
 def main():
     args = docopt.docopt(__doc__, version='brix 1.0-dev')
-    app = Brix()
+    app = Brix(args['--region'])
     try:
         if args['validate']:
             app.validate(quiet=args['--quiet'])
@@ -220,8 +245,8 @@ def main():
             app.show(args['<name>'])
         elif args['sync']:
             app.sync()
-        elif args['list']:
-            app.list(args['--region'])
+        elif args['stacks']:
+            app.stacks()
         elif args['update']:
             if not args['--no-sync']:
                 app.sync()
@@ -231,9 +256,11 @@ def main():
                 else:
                     return (s, '1')
             params = dict(parse_param(s) for s in args['--param'])
-            app.update(args['--region'], args['<template_name>'], args['<stack_name>'], params)
+            app.update(args['<stack>'], args['<template>'], params)
         elif args['events']:
-            app.events(args['--region'], args['<stack>'] or 'BalancedRegion', not args['--no-recurse'])
+            app.events(args['<stack>'], not args['--no-recurse'])
+        elif args['diff']:
+            app.diff(args['<stack>'], args['<template>'])
     except ValueError, e:
         print(e.message, file=sys.stderr)
         sys.exit(1)
