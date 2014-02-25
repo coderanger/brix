@@ -105,13 +105,14 @@ class Brix(object):
 
     def sync(self):
         self.validate(quiet=True) # Make sure all templates are good
-        s3 = boto.connect_s3(self.access_key_id, self.secret_access_key)
         for name in self.templates:
             print('Uploading {}'.format(name), end='')
             for region in self.REGIONS:
-                bucket = conn.get_bucket('balanced-cfn-{0}'.format(region))
+                print(' {}'.format(region), end='')
+                bucket = self.s3.get_bucket('balanced-cfn-{0}'.format(region))
                 key = bucket.get_key(self.templates[name]['s3_key'], validate=False)
                 key.set_contents_from_string(self.templates[name]['json'])
+            print()
 
     def update(self, stack_name, template_name=None, params={}):
         try:
@@ -135,7 +136,7 @@ class Brix(object):
         data = self._get_template(template_name)
         getattr(self.cfn, operation)(
             stack_name=stack_name,
-            template_url='https://balanced-cfn-{}.s3.amazonaws.com/{}'.format(region, data['s3_key']),
+            template_url='https://balanced-cfn-{}.s3.amazonaws.com/{}'.format(self.region, data['s3_key']),
             capabilities=['CAPABILITY_IAM'],
             parameters=params.items(),
             **kwargs)
