@@ -102,7 +102,12 @@ class BalancedGateway(Template):
                 {
                     'Effect': 'Allow',
                     'Action': 's3:GetObject',
-                    'Resource': Join('', ['arn:aws:s3:::balanced-cfn-', Ref('AWS::Region'), '/*']),
+                    'Resource': [
+                        "arn:aws:s3:::balanced-citadel/newrelic/*",
+                        "arn:aws:s3:::balanced-citadel/deploy_key/*",
+                        "arn:aws:s3:::balanced.debs/*",
+                        "arn:aws:s3:::apt.vandelay.io/*",
+                    ],
                 },
                 {
                     'Effect': 'Allow',
