@@ -58,6 +58,7 @@ import troposphere
 class Brix(object):
     TEMPLATES = [
         'balanced_region',
+        'legacy_region',
         'balanced_az',
         'balanced_gateway',
         'balanced_docs',
