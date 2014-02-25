@@ -26,12 +26,32 @@ def FindInRegionMap(map, key):
     return FindInMap(map, Ref('AWS::Region'), key)
 
 
-class BalancedRegionTemplate(Template):
-    """Template for a whole AWS region."""
+class BalancedRegionBase(Template):
+    """Base template for regions."""
 
     def param_VpcId(self):
         # We don't have one of these, we are the alpha and the omega
         return None
+
+    def map_RegionMap(self):
+        return {
+            'us-west-1': {
+                'AmiId': 'ami-dac4f89f',
+            },
+            'us-west-2': {
+                'AmiId': 'ami-3e167a0e',
+            },
+            'us-east-1': {
+                'AmiId': 'ami-21898948', # For the future
+            },
+        }
+
+    def vpc(self):
+        raise NotImplementedError
+
+
+class BalancedRegionTemplate(BalancedRegionBase):
+    """Template for a whole AWS region."""
 
     def param_Ip(self):
         """Second octet to use for VPC subnets."""
@@ -56,21 +76,6 @@ class BalancedRegionTemplate(Template):
     def FindSubnet(self, key):
         head, tail = self.SUBNETS[key].split('{0}')
         return Join('', [head, Ref(self.param_Ip()), tail])
-
-    def map_RegionMap(self):
-        return {
-            'us-west-1': {
-                'GatewayAmiId': 'ami-d69aad93',
-                'AmiId': 'ami-f0ccf0b5',
-            },
-            'us-west-2': {
-                'GatewayAmiId': 'ami-f032acc0',
-                'AmiId': 'ami-de076bee',
-            },
-            'us-east-1': {
-                'AmiId': 'ami-55cdcd3c', # For the future
-            },
-        }
 
     def vpc(self):
         """VPC for this region."""
