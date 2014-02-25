@@ -89,6 +89,20 @@ class BalancedRegionTemplate(Template):
             'InternetGatewayId': Ref(self.ig()),
         }
 
+    def dhcp(self):
+        """DHCP options for this VPC."""
+        return {
+            'DomainName': 'vandelay.io',
+            'DomainNameServers': ['AmazonProvidedDNS'],
+        }
+
+    def vdoa(self):
+        """DHCP options association for this VPC."""
+        return {
+            'VpcId': Ref(self.vpc()),
+            'DhcpOptionsId': Ref(self.dhcp()),
+        }
+
     def rtb(self):
         """Route table for public subnets."""
         return {
@@ -117,7 +131,7 @@ class BalancedRegionTemplate(Template):
                 'MiscCidr': self.FindSubnet('Misc{0}'.format(zone_id)),
                 'AmiId': FindInRegionMap(self.map_RegionMap(), 'AmiId'),
             },
-            'DependsOn': self.vga(),
+            'DependsOn': [self.vga(), self.vdoa()],
         }
 
     def stack_ZoneA(self):
