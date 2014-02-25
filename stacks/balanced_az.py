@@ -44,7 +44,7 @@ class BalancedAZTemplate(Template):
         """CIDR block for gateway subnet."""
         return {'Type': 'String'}
 
-    def param_GatewayAmiId(self):
+    def param_AmiId(self):
         """AMI ID for gateway instances."""
         return {'Type': 'String'}
 
@@ -56,7 +56,7 @@ class BalancedAZTemplate(Template):
         return {
             'TemplateName': 'balanced_gateway',
             'Parameters': {
-                'AmiId': Ref(self.param_GatewayAmiId()),
+                'AmiId': Ref(self.param_AmiId()),
                 'AvailabilityZone': Ref(self.param_AvailabilityZone()),
                 'Cidr': Ref(self.param_GatewayCidr()),
                 'PublicRouteTableId': Ref(self.param_PublicRouteTableId()),

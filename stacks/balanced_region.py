@@ -115,7 +115,7 @@ class BalancedRegionTemplate(Template):
                 'ProductionCidr': self.FindSubnet('Production{0}'.format(zone_id)),
                 'TestCidr': self.FindSubnet('Test{0}'.format(zone_id)),
                 'MiscCidr': self.FindSubnet('Misc{0}'.format(zone_id)),
-                'GatewayAmiId': FindInRegionMap(self.map_RegionMap(), 'GatewayAmiId'),
+                'AmiId': FindInRegionMap(self.map_RegionMap(), 'AmiId'),
             },
             'DependsOn': self.vga(),
         }

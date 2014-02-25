@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-from troposphere import Join, Ref
+from troposphere import Base64, Join, Ref
 from troposphere.ec2 import NetworkInterfaceProperty
 
 import stratosphere
@@ -49,6 +49,12 @@ class GatewayInstance(stratosphere.ec2.Instance):
 
     def SourceDestCheck(self):
         return False
+
+    def UserData(self):
+        return Base64(''.join([
+            '#!/bin/bash -xe\n',
+            '/opt/bootstrap.sh nat production role-nat\n',
+        ]))
 
 
 class BalancedGateway(Template):
