@@ -37,4 +37,4 @@ EOP
 echo "node_name '$HOSTNAME'" >> /etc/chef/client.rb
 
 # Run Chef
-chef-client --environment "$ENV" --json-attributes /etc/chef/first-boot.json
+chef-client --environment "$ENV" --json-attributes /etc/chef/first-boot.json --logfile /var/log/chef-bootstrap.log
