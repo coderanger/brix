@@ -70,12 +70,13 @@ class Brix(object):
     ]
 
     def __init__(self, region):
+        self.region = region
         # TODO: Allow configuring these on the command line
         self.access_key_id = os.environ.get('BALANCED_AWS_ACCESS_KEY_ID', os.environ.get('AWS_ACCESS_KEY_ID'))
         self.secret_access_key = os.environ.get('BALANCED_AWS_SECRET_ACCESS_KEY', os.environ.get('AWS_SECRET_ACCESS_KEY'))
         # Connect to the right CloudFormation region
         for r in boto.cloudformation.regions():
-            if r.name == region:
+            if r.name == self.region:
                 break
         else:
             raise ValueError('Unknown region {0}'.format(region))
@@ -123,11 +124,11 @@ class Brix(object):
                 params = existing_params
             if not template_name:
                 template_name = stack.tags.get('TemplateName')
-            print('Updating stack {} in {}'.format(stack_name, region))
+            print('Updating stack {} in {}'.format(stack_name, self.region))
         except boto.exception.BotoServerError:
             operation = 'create_stack'
             kwargs = {'disable_rollback': True, 'tags': {'TemplateName': template_name}}
-            print('Creating stack {} in {}'.format(stack_name, region))
+            print('Creating stack {} in {}'.format(stack_name, self.region))
         if not template_name:
             raise ValueError('Template name for stack {} is required'.format(stack_name))
         print()
