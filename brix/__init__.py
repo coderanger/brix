@@ -28,7 +28,7 @@
 -h --help                    show this help message and exit
 --version                    show program's version number and exit
 -q, --quiet                  minimal output
---region=REGION              AWS region [default: us-west-1]
+-r, --region=REGION          AWS region [default: us-west-1]
 --no-sync                    do not auto-sync before update
 --param=KEY:VALUE            parameters to pass to the stack
 --no-recurse                 do not process sub-stacks
