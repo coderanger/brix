@@ -17,18 +17,33 @@
 #
 
 import troposphere.elasticloadbalancing
-from troposphere import Ref, Join, Base64
+from troposphere import If, Ref, Join, Base64
 
 import stratosphere
+from stratosphere.functions import And, Equals, Not
+
+class ConditionalAZMixin(object):
+    """A mixing to load some default parameters for multi-AZ objects."""
+
+    def __init__(self, *args, **kwargs):
+        template = kwargs['template']
+        self._cond_a = kwargs.pop('CondA', 'HasA')
+        self._cond_b = kwargs.pop('CondB', 'HasB')
+        self._cond_c = kwargs.pop('CondC', 'HasC')
+        self._subnet_a = kwargs.pop('SubnetA', Ref(template.param_SubnetA()))
+        self._subnet_b = kwargs.pop('SubnetB', Ref(template.param_SubnetB()))
+        self._subnet_c = kwargs.pop('SubnetC', Ref(template.param_SubnetC()))
+        self._gateway_security_group_a = kwargs.pop('GatewaySecurityGroupA', Ref(template.param_GatewaySecurityGroupA()))
+        self._gateway_security_group_b = kwargs.pop('GatewaySecurityGroupB', Ref(template.param_GatewaySecurityGroupB()))
+        self._gateway_security_group_c = kwargs.pop('GatewaySecurityGroupC', Ref(template.param_GatewaySecurityGroupC()))
+        super(ConditionalAZMixin, self).__init__(*args, **kwargs)
 
 
-class SecurityGroup(stratosphere.ec2.SecurityGroup):
+class SecurityGroup(ConditionalAZMixin, stratosphere.ec2.SecurityGroup):
     def __init__(self, *args, **kwargs):
         self._allow = kwargs.pop('Allow', [])
         self._allow_self = kwargs.pop('AllowSelf', True)
-        self._gateway_security_group_a = kwargs.pop('GatewaySecurityGroupA', None)
-        self._gateway_security_group_b = kwargs.pop('GatewaySecurityGroupB', None)
-        self._gateway_security_group_c = kwargs.pop('GatewaySecurityGroupC', None)
+        self._allow_ssh = kwargs.pop('AllowSSH', False)
         super(SecurityGroup, self).__init__(*args, **kwargs)
 
     def VpcId(self):
@@ -43,7 +58,7 @@ class SecurityGroup(stratosphere.ec2.SecurityGroup):
             ToPort='-1',
             CidrIp='0.0.0.0/0',
         ))
-        if not (self._gateway_security_group_a or self._gateway_security_group_b or self._gateway_security_group_c):
+        if self._allow_ssh:
             rules.append(stratosphere.ec2.SecurityGroupRule(
                 'SSH',
                 IpProtocol='tcp',
@@ -52,30 +67,39 @@ class SecurityGroup(stratosphere.ec2.SecurityGroup):
                 CidrIp='0.0.0.0/0',
             ))
         else:
-            if self._gateway_security_group_a:
-                rules.append(stratosphere.ec2.SecurityGroupRule(
+            rules.append(If(
+                self._cond_a,
+                stratosphere.ec2.SecurityGroupRule(
                     'SSHA',
                     IpProtocol='tcp',
                     FromPort='22',
                     ToPort='22',
                     SourceSecurityGroupId=self._gateway_security_group_a,
-                ))
-            if self._gateway_security_group_b:
-                rules.append(stratosphere.ec2.SecurityGroupRule(
+                ),
+                'AWS::NoValue'
+            ))
+            rules.append(If(
+                self._cond_b,
+                stratosphere.ec2.SecurityGroupRule(
                     'SSHB',
                     IpProtocol='tcp',
                     FromPort='22',
                     ToPort='22',
                     SourceSecurityGroupId=self._gateway_security_group_b,
-                ))
-            if self._gateway_security_group_c:
-                rules.append(stratosphere.ec2.SecurityGroupRule(
+                ),
+                'AWS::NoValue'
+            ))
+            rules.append(If(
+                self._cond_c,
+                stratosphere.ec2.SecurityGroupRule(
                     'SSHC',
                     IpProtocol='tcp',
                     FromPort='22',
                     ToPort='22',
                     SourceSecurityGroupId=self._gateway_security_group_c,
-                ))
+                ),
+                'AWS::NoValue'
+            ))
         for port in self._allow:
             rules.append(stratosphere.ec2.SecurityGroupRule(
                 'Port{0}'.format(port),
@@ -114,7 +138,7 @@ class SecurityGroup(stratosphere.ec2.SecurityGroup):
             ))
 
 
-class LoadBalancer(stratosphere.elasticloadbalancing.LoadBalancer):
+class LoadBalancer(ConditionalAZMixin, stratosphere.elasticloadbalancing.LoadBalancer):
     def __init__(self, *args, **kwargs):
         self._port = kwargs.pop('Port', '80')
         self._ssl_certificate_id = kwargs.pop('SSLCertificateId', 'balancedpayments-2014')
@@ -170,18 +194,18 @@ class LoadBalancer(stratosphere.elasticloadbalancing.LoadBalancer):
 
     def Subnets(self):
         return [
-            Ref(self.template.param_SubnetA()),
-            Ref(self.template.param_SubnetB()),
-            Ref(self.template.param_SubnetC()),
+            If(self._cond_a, self._subnet_a, 'AWS::NoValue'),
+            If(self._cond_b, self._subnet_b, 'AWS::NoValue'),
+            If(self._cond_c, self._subnet_c, 'AWS::NoValue'),
         ]
 
 
 class LaunchConfiguration(stratosphere.autoscaling.LaunchConfiguration):
     def __init__(self, *args, **kwargs):
         self._security_group = kwargs.pop('SecurityGroup', None)
-        self._chef_role = kwargs.pop('ChefRole')
+        self._chef_recipe = kwargs.pop('ChefRecipe')
         self._chef_env = kwargs.pop('ChefEnv')
-        self._name_tag = kwargs.pop('NameTag', self._chef_role)
+        self._name_tag = kwargs.pop('NameTag', 'ec2')
         super(LaunchConfiguration, self).__init__(*args, **kwargs)
 
     def IamInstanceProfile(self):
@@ -200,28 +224,17 @@ class LaunchConfiguration(stratosphere.autoscaling.LaunchConfiguration):
     def UserData(self):
         return Base64(Join('', [
             '#!/bin/bash -xe\n',
-            '/opt/bootstrap.sh "', self._name_tag, '" "', self._chef_env, '" "',  self._chef_role, '"\n',
+            '/opt/bootstrap.sh "', self._name_tag, '" "', self._chef_env, '" "',  self._chef_recipe, '"\n',
         ]))
 
 
-class AutoScalingGroup(stratosphere.autoscaling.AutoScalingGroup):
-    def __init__(self, *args, **kwargs):
-        self._subnet_a = kwargs.pop('SubnetA', None)
-        self._subnet_b = kwargs.pop('SubnetB', None)
-        self._subnet_c = kwargs.pop('SubnetC', None)
-        if not (self._subnet_a or self._subnet_b or self._subnet_c):
-            raise ValueError('At least one subnet must be provided')
-        super(AutoScalingGroup, self).__init__(*args, **kwargs)
-
+class AutoScalingGroup(ConditionalAZMixin, stratosphere.autoscaling.AutoScalingGroup):
     def AvailabilityZones(self):
-        azs = []
-        if self._subnet_a:
-            azs.append(Join('', [Ref('AWS::Region'), 'a']))
-        if self._subnet_b:
-            azs.append(Join('', [Ref('AWS::Region'), 'b']))
-        if self._subnet_c:
-            azs.append(Join('', [Ref('AWS::Region'), 'c']))
-        return azs
+        return [
+            If(self._cond_a, Join('', [Ref('AWS::Region'), 'a']), 'AWS::NoValue'),
+            If(self._cond_b, Join('', [Ref('AWS::Region'), 'b']), 'AWS::NoValue'),
+            If(self._cond_c, Join('', [Ref('AWS::Region'), 'c']), 'AWS::NoValue'),
+        ]
 
     def LaunchConfigurationName(self):
         return Ref(self.template.lc())
@@ -236,14 +249,11 @@ class AutoScalingGroup(stratosphere.autoscaling.AutoScalingGroup):
         return '1'
 
     def VPCZoneIdentifier(self):
-        subnets = []
-        if self._subnet_a:
-            subnets.append(self._subnet_a)
-        if self._subnet_b:
-            subnets.append(self._subnet_b)
-        if self._subnet_c:
-            subnets.append(self._subnet_c)
-        return subnets
+        return [
+            If(self._cond_a, self._subnet_a, 'AWS::NoValue'),
+            If(self._cond_b, self._subnet_b, 'AWS::NoValue'),
+            If(self._cond_c, self._subnet_c, 'AWS::NoValue'),
+        ]
 
 
 class Stack(stratosphere.cloudformation.Stack):
@@ -301,58 +311,153 @@ class AppTemplate(Template):
     """A model for Cloud Formation stack for a Balanced application."""
 
     # Parameter defaults
-    IAM_ROLE = None
-    CHEF_ROLE = None
+    CHEF_RECIPE = None
     STACK_TAG = None
     INSTANCE_TYPE = 'm1.small'
     CAPACITY = 1
+    CITADEL_FOLDERS = []
+    S3_BUCKETS = []
+    IAM_STATEMENTS = []
+    ALLOW_PORTS = [80]
 
-    def parameter_KeyName(self):
-        """Name of existing EC2 KeyPair to enable SSH access to instances."""
-        return {'Type': 'String'}
+    def param_ChefRecipe(self):
+        """Chef recipe name."""
+        if not self.CHEF_RECIPE:
+            raise ValueError('CHEF_RECIPE not set for %s'%self.__class__.__name__)
+        return {'Type': 'String', 'Default': self.CHEF_RECIPE}
 
-    def parameter_Role(self):
-        """IAM role name."""
-        if not self.IAM_ROLE:
-            raise ValueError('IAM_ROLE not set for %s'%self.__class__.__name__)
-        return {'Type': 'String', 'Default': self.IAM_ROLE}
-
-    def parameter_ChefRole(self):
-        """Configuration role name."""
-        if not self.CHEF_ROLE:
-            raise ValueError('CHEF_ROLE not set for %s'%self.__class__.__name__)
-        return {'Type': 'String', 'Default': self.CHEF_ROLE}
-
-    def parameter_Tag(self):
+    def param_Tag(self):
         """Stack tag."""
         if not self.STACK_TAG:
             raise ValueError('STACK_TAG not set for %s'%self.__class__.__name__)
         return {'Type': 'String', 'Default': self.STACK_TAG}
 
-    def parameter_ChefEnv(self):
-        """Configuration environment."""
-        return {'Type': 'String', 'AllowedValues': ['dev', 'production'], 'Default': 'production'}
+    def param_Env(self):
+        """Logical environment."""
+        return {'Type': 'String', 'AllowedValues': ['production', 'test', 'misc'], 'Default': 'production'}
 
-    def parameter_InstanceType(self):
+    def param_ChefEnv(self):
+        """Configuration environment."""
+        return {'Type': 'String', 'Default': 'production'}
+
+    def param_InstanceType(self):
         """Instance type."""
         return {'Type': 'String', 'AllowedValues': ['t1.micro', 'm1.small', 'm1.medium', 'm1.large'], 'Default': self.INSTANCE_TYPE}
 
-    def parameter_ConfuciusVer(self):
-        """Instance configuration version."""
-        return {'Type': 'String', 'Default': '1'}
-
-    def parameter_DesiredCapacity(self):
+    def param_Capacity(self):
         """Instance count."""
         return {'Type': 'Number', 'Default': str(self.CAPACITY)}
 
-    def _mapping_us_west_1(self, env):
-        return self.deep_merge(super(Template, self)._mapping_us_west_1(env), {
-            'AMI': 'ami-e05260a5', # Ubuntu 12.04 daily
-            'AvailabilityZones': ['us-west-1a', 'us-west-1b'],
-        })
+    def param_AmiId(self):
+        """Amazon machine image."""
+        return {'Type': 'String'}
 
-    def elb_LoadBalancer(self):
-        return {}
+    def param_SubnetA(self):
+        """Subnet ID for AZ A. Optional."""
+        return {'Type': 'String', 'Default': ''}
 
-    def lc_LaunchConfiguration(self):
-        return {}
+    def param_SubnetB(self):
+        """Subnet ID for AZ B. Optional."""
+        return {'Type': 'String', 'Default': ''}
+
+    def param_SubnetC(self):
+        """Subnet ID for AZ C. Optional."""
+        return {'Type': 'String', 'Default': ''}
+
+    def param_GatewaySecurityGroupA(self):
+        """Security group ID for AZ A Gateway instances. Optional."""
+        return {'Type': 'String', 'Default': ''}
+
+    def param_GatewaySecurityGroupB(self):
+        """Security group ID for AZ B Gateway instances. Optional."""
+        return {'Type': 'String', 'Default': ''}
+
+    def param_GatewaySecurityGroupC(self):
+        """Security group ID for AZ C Gateway instances. Optional."""
+        return {'Type': 'String', 'Default': ''}
+
+    def cond_HasA(self):
+        """Condition checking if AZ A is usable."""
+        return And(
+            Not(Equals(Ref(self.param_SubnetA()), '')),
+            Not(Equals(Ref(self.param_GatewaySecurityGroupA()), '')),
+        )
+
+    def cond_HasB(self):
+        """Condition checking if AZ B is usable."""
+        return And(
+            Not(Equals(Ref(self.param_SubnetB()), '')),
+            Not(Equals(Ref(self.param_GatewaySecurityGroupB()), '')),
+        )
+
+    def cond_HasC(self):
+        """Condition checking if AZ C is usable."""
+        return And(
+            Not(Equals(Ref(self.param_SubnetC()), '')),
+            Not(Equals(Ref(self.param_GatewaySecurityGroupC()), '')),
+        )
+
+    def sg(self):
+        """Security group."""
+        return {
+            'Description': 'Security group for {}'.format(self.__class__.__name__),
+            'Allow': self.ALLOW_PORTS,
+        }
+
+    def elb(self):
+        """Load balancer."""
+        return {
+            'Description': 'Load balancer for {}'.format(self.__class__.__name__),
+            'HealthUrl': '/',
+        }
+
+    # TODO: this needs an overhaul
+    def role(self):
+        """IAM role for Balanced docs."""
+        return {
+            'Statements': [
+                {
+                    'Effect': 'Allow',
+                    'Action': 's3:GetObject',
+                    'Resource':[
+                        "arn:aws:s3:::balanced-citadel/newrelic/*",
+                        "arn:aws:s3:::balanced-citadel/deploy_key/*",
+                        "arn:aws:s3:::balanced.debs/*",
+                        "arn:aws:s3:::apt.vandelay.io/*",
+                    ],
+                },
+                {
+                    'Effect': 'Allow',
+                    'Action': [
+                        'route53:GetHostedZone',
+                        'route53:ListResourceRecordSets',
+                        'route53:ChangeResourceRecordSets',
+                  ],
+                  'Resource': 'arn:aws:route53:::hostedzone/Z2IP8RX9IARH86',
+                },
+            ],
+        }
+
+    def insp(self):
+        """IAM instance profile."""
+        return {
+            'Description': 'IAM instance profile for {}'.format(self.__class__.__name__),
+            'Roles': [Ref(self.role())],
+        }
+
+    def lc(self):
+        """ASG launch configuration."""
+        return {
+            'Description': 'ASG launch configuration for {}'.format(self.__class__.__name__),
+            'SecurityGroup': Ref(self.sg()),
+            'ChefRecipe': Ref(self.param_ChefRecipe()),
+            'ChefEnv': Ref(self.param_ChefEnv()),
+            'NameTag': Ref(self.param_Tag()),
+            'InstanceType': Ref(self.param_InstanceType()),
+        }
+
+    def asg(self):
+        """Autoscaling group."""
+        return {
+            'Description': 'Autoscaling group for {}'.format(self.__class__.__name__),
+        }

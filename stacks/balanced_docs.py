@@ -16,101 +16,15 @@
 # limitations under the License.
 #
 
-from troposphere import Join, Ref
-
-from .base import Template
+from .base import AppTemplate
 
 
-class BalancedDocs(Template):
+class BalancedDocs(AppTemplate):
     """Balanced docs"""
 
-    CHEF_ROLE = 'balanced-docs'
+    CHEF_RECIPE = 'balanced-docs'
     STACK_TAG = 'docs'
 
-    def param_Env(self):
-        return {'Type': 'String'}
-
-    def param_AmiId(self):
-        return {'Type': 'String'}
-
-    def param_SubnetA(self):
-        return {'Type': 'String'}
-
-    def param_SubnetB(self):
-        return {'Type': 'String'}
-
-    def param_SubnetC(self):
-        return {'Type': 'String'}
-
-    def param_GatewaySecurityGroupA(self):
-        return {'Type': 'String'}
-
-    def param_GatewaySecurityGroupB(self):
-        return {'Type': 'String'}
-
-    def param_GatewaySecurityGroupC(self):
-        return {'Type': 'String'}
-
-    def sg(self):
-        """Balanced docs security group."""
-        return {
-            'Allow': [80],
-            'GatewaySecurityGroupA': Ref(self.param_GatewaySecurityGroupA()),
-            'GatewaySecurityGroupB': Ref(self.param_GatewaySecurityGroupB()),
-            'GatewaySecurityGroupC': Ref(self.param_GatewaySecurityGroupC()),
-        }
-
-    def elb(self):
-        """Balanced docs load balancer."""
-        return {'HealthUrl': '/'}
-
-    def role(self):
-        """IAM role for Balanced docs."""
-        return {
-            'Statements': [
-                {
-                    'Effect': 'Allow',
-                    'Action': 's3:GetObject',
-                    'Resource':[
-                        Join('', ['arn:aws:s3:::balanced-cfn-', Ref('AWS::Region'), '/*']),
-                        "arn:aws:s3:::balanced.citadel/newrelic/*",
-                        "arn:aws:s3:::balanced.debs/*",
-                        "arn:aws:s3:::apt.vandelay.io/*",
-                    ],
-                },
-                {
-                    'Effect': 'Allow',
-                    'Action': [
-                        'route53:GetHostedZone',
-                        'route53:ListResourceRecordSets',
-                        'route53:ChangeResourceRecordSets',
-                  ],
-                  'Resource': 'arn:aws:route53:::hostedzone/Z2IP8RX9IARH86',
-                },
-            ],
-        }
-
-    def insp(self):
-        """IAM instance profile for Balanced docs."""
-        return {'Roles': [Ref(self.role())]}
-
-    def lc(self):
-        """Balanced docs launch configuration."""
-        return {
-            'SecurityGroup': Ref(self.sg()),
-            'ChefRole': self.CHEF_ROLE,
-            'ChefEnv': 'production',
-            'NameTag': self.STACK_TAG,
-            'InstanceType': 'm1.small',
-        }
-
-    def asg(self):
-        """Balanced docs autoscaling group."""
-        return {
-            'SubnetA': Ref(self.param_SubnetA()),
-            'SubnetB': Ref(self.param_SubnetB()),
-            'SubnetC': Ref(self.param_SubnetC()),
-        }
 
 if __name__ == '__main__':
     print(BalancedDocs().to_json())
