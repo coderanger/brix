@@ -219,7 +219,7 @@ class Brix(object):
         elif 'balanced_{}'.format(name) in self.templates:
             return self.templates['balanced_{}'.format(name)]
         else:
-            raise ValueError('Unknown template {}'.format(template_name))
+            raise ValueError('Unknown template {}'.format(name))
 
     def _cfn_iterate(self, fn):
         first = True
