@@ -33,5 +33,8 @@ cat > /etc/chef/first-boot.json <<EOP
 {"run_list":["recipe[role-base]", "recipe[$ROLE]"]}
 EOP
 
+# Lock the chef node name
+echo "node_name '$HOSTNAME'" >> /etc/chef/client.rb
+
 # Run Chef
 chef-client --environment "$ENV" --json-attributes /etc/chef/first-boot.json
