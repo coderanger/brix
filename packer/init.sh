@@ -44,6 +44,10 @@ sudo chown -R root:root /opt/ec2-ami-tools
 sudo mkdir /etc/chef
 sudo chown -R root:root /etc/chef
 sudo chmod 700 /etc/chef
+if [ -f /tmp/cacert.pem ]; then
+  sudo mv /tmp/cacert.pem /etc/chef
+  sudo chmod 600 /etc/chef/cacert.pem
+fi
 if [ -f /tmp/validation.pem ]; then
   sudo mv /tmp/validation.pem /etc/chef
   sudo chmod 600 /etc/chef/validation.pem

@@ -50,6 +50,11 @@
       "destination": "/tmp/bootstrap.sh"
     },
     {
+      "type": "file",
+      "source": "cacert.pem",
+      "destination": "/tmp/cacert.pem"
+    },
+    {
       "type": "shell",
       "script": "init.sh"
     }
