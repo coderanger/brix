@@ -209,9 +209,16 @@ class Brix(object):
         """Given a module name, return the template class."""
         # Mahmoud, be mad ;-)
         mod = importlib.import_module('stacks.{0}'.format(name), __package__)
+        templates = {}
+        def massage_name(name):
+            return name.lower().replace('_', '')
         for key, value in mod.__dict__.iteritems():
             if isinstance(value, type) and issubclass(value, troposphere.Template) and not key[0] == '_' and key != 'Template':
-                return value
+                templates[massage_name(key)] = value
+        template_class = templates.get(massage_name(name), templates.get(massage_name(name)+'template'))
+        if not template_class:
+            raise ValueError('Unable to find a template in module {}'.format(name))
+        return template_class
 
     def _get_template(self, name):
         """Return the data for a given template name."""
