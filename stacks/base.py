@@ -342,7 +342,7 @@ class AppTemplate(Template):
 
     def param_InstanceType(self):
         """Instance type."""
-        return {'Type': 'String', 'AllowedValues': ['t1.micro', 'm1.small', 'm1.medium', 'm1.large'], 'Default': self.INSTANCE_TYPE}
+        return {'Type': 'String', 'Default': self.INSTANCE_TYPE}
 
     def param_Capacity(self):
         """Instance count."""
