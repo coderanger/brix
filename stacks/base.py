@@ -438,12 +438,23 @@ class AppTemplate(Template):
             'Allow': [self.PORT],
         }
 
+    def sg_LoadBalancerSecurityGroup(self):
+        """Load balanacer security group."""
+        return {
+            'Description': 'Security group for {} load balancer'.format(self.__class__.__name__),
+            'Allow': [80, 443],
+            'GatewaySSH': False,
+            'AllowSelf': False,
+        }
+
+
     def elb(self):
         """Load balancer."""
         return {
             'Description': 'Load balancer for {}'.format(self.__class__.__name__),
             'HealthUrl': '/health',
             'Port': self.PORT,
+            'SecurityGroup': Ref(self.sg_LoadBalancerSecurityGroup()),
         }
 
     # TODO: this needs an overhaul
