@@ -17,7 +17,7 @@
 #
 
 """Usage:
-  brix [options] validate
+  brix [options] validate [--full]
   brix [options] show <name>
   brix [options] sync
   brix [options] update [--no-sync --param=KEY:VALUE...] <stack> [<template>]
@@ -29,6 +29,7 @@
 --version                    show program's version number and exit
 -q, --quiet                  minimal output
 -r, --region=REGION          AWS region [default: us-west-1]
+-f, --full                   run slower validations
 --no-sync                    do not auto-sync before update
 --param=KEY:VALUE            parameters to pass to the stack
 --no-recurse                 do not process sub-stacks
@@ -51,6 +52,7 @@ import traceback
 
 import boto
 import boto.cloudformation
+import boto.exception
 import docopt
 import troposphere
 
@@ -86,13 +88,29 @@ class Brix(object):
         # Load and render all templates
         self.templates = self._load_templates()
 
-    def validate(self, quiet=False):
+    def validate(self, quiet=False, full=False):
         error = False
         for name, data in self.templates.iteritems():
             if 'error' in data:
                 error = True
                 print("{} error: {}".format(name, data['error'][1]))
-            elif not quiet:
+                continue
+            if full:
+                # Run server-based validation
+                bucket = self.s3.get_bucket('balanced-cfn-us-east-1')
+                key = bucket.get_key('validation_tmp', validate=False)
+                key.set_contents_from_string(data['json'])
+                try:
+                    self.cfn.validate_template(template_url='https://balanced-cfn-us-east-1.s3.amazonaws.com/validation_tmp')
+                except boto.exception.BotoServerError, e:
+                    if e.status != 400:
+                        raise
+                    error = True
+                    print("{} error: {}".format(name, e.message))
+                    continue
+                finally:
+                    key.delete()
+            if not quiet:
                 print("{0} ok".format(name))
         if error:
             raise ValueError('Errors detected')
@@ -246,7 +264,7 @@ def main():
     app = Brix(args['--region'])
     try:
         if args['validate']:
-            app.validate(quiet=args['--quiet'])
+            app.validate(quiet=args['--quiet'], full=args['--full'])
         elif args['show']:
             app.show(args['<name>'])
         elif args['sync']:
