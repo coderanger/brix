@@ -414,17 +414,15 @@ class AppTemplate(Template):
     # TODO: this needs an overhaul
     def role(self):
         """IAM role for Balanced docs."""
+        citadel_folders = ['newrelic', 'deploy_key'] + self.CITADEL_FOLDERS
+        s3_buckets = ['balanced-citadel/{}'.format(s) for s in citadel_folders] + ['balanced.debs', 'apt.vandelay.io'] + self.S3_BUCKETS
+        s3_objects = ['arn:aws:s3:::{}/*'.format(s) for s in s3_buckets]
         return {
             'Statements': [
                 {
                     'Effect': 'Allow',
                     'Action': 's3:GetObject',
-                    'Resource':[
-                        "arn:aws:s3:::balanced-citadel/newrelic/*",
-                        "arn:aws:s3:::balanced-citadel/deploy_key/*",
-                        "arn:aws:s3:::balanced.debs/*",
-                        "arn:aws:s3:::apt.vandelay.io/*",
-                    ],
+                    'Resource': s3_objects,
                 },
                 {
                     'Effect': 'Allow',
@@ -435,7 +433,7 @@ class AppTemplate(Template):
                   ],
                   'Resource': 'arn:aws:route53:::hostedzone/Z2IP8RX9IARH86',
                 },
-            ],
+            ] + self.IAM_STATEMENTS,
         }
 
     def insp(self):
