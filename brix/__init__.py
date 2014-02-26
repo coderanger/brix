@@ -98,6 +98,8 @@ class Brix(object):
                 continue
             if full:
                 # Run server-based validation
+                # Trying to use template_body fails randomly, probably due to
+                # length limits.
                 bucket = self.s3.get_bucket('balanced-cfn-us-east-1')
                 key = bucket.get_key('validation_tmp', validate=False)
                 key.set_contents_from_string(data['json'])
