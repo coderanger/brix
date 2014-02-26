@@ -22,8 +22,15 @@ from .base import AppTemplate
 class BalancedDocs(AppTemplate):
     """Balanced docs"""
 
+    ENV = 'misc'
     CHEF_RECIPE = 'balanced-docs'
     STACK_TAG = 'docs'
+
+    def elb(self):
+        """Load balancer for BalancedDocs."""
+        return {
+            'HealthUrl': '/',
+        }
 
 
 if __name__ == '__main__':

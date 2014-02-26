@@ -327,10 +327,6 @@ class Template(stratosphere.Template):
     SECURITY_GROUP_TYPE = SecurityGroup
     STACK_TYPE = Stack
 
-    # def parameter_Env(self):
-    #     """Stack environment."""
-    #     return {'Type': 'String', 'AllowedValues': ['production', 'test', 'misc'], 'Default': 'misc'}
-
     def param_VpcId(self):
         """VPC ID."""
         return {'Type': 'String'}
@@ -352,7 +348,7 @@ class AppTemplate(Template):
     CITADEL_FOLDERS = []
     S3_BUCKETS = []
     IAM_STATEMENTS = []
-    ALLOW_PORTS = [80]
+    PORT = 80
 
     def param_ChefRecipe(self):
         """Chef recipe name."""
@@ -435,14 +431,15 @@ class AppTemplate(Template):
         """Security group."""
         return {
             'Description': 'Security group for {}'.format(self.__class__.__name__),
-            'Allow': self.ALLOW_PORTS,
+            'Allow': [self.PORT],
         }
 
     def elb(self):
         """Load balancer."""
         return {
             'Description': 'Load balancer for {}'.format(self.__class__.__name__),
-            'HealthUrl': '/',
+            'HealthUrl': '/health',
+            'Port': self.PORT,
         }
 
     # TODO: this needs an overhaul

@@ -93,7 +93,7 @@ class BalancedGateway(Template):
 
     def sg(self):
         """Security group for gateway instance."""
-        return {}
+        return {'AllowSSH': True}
 
     def role(self):
         """IAM role for gateway instance."""
