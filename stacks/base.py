@@ -213,7 +213,7 @@ class LoadBalancer(ConditionalAZMixin, stratosphere.elasticloadbalancing.LoadBal
     def HealthCheck(self):
         if self._health_url:
             return troposphere.elasticloadbalancing.HealthCheck(
-                Target=Join('', ['HTTP:', '80', self._health_url]),
+                Target=Join('', ['HTTP:', self._port, self._health_url]),
                 HealthyThreshold='3',
                 UnhealthyThreshold='5',
                 Interval='30',
