@@ -323,13 +323,13 @@ class AppTemplate(Template):
     def param_ChefRecipe(self):
         """Chef recipe name."""
         if not self.CHEF_RECIPE:
-            raise ValueError('CHEF_RECIPE not set for %s'%self.__class__.__name__)
+            raise ValueError('CHEF_RECIPE not set for {}'.format(self.__class__.__name__))
         return {'Type': 'String', 'Default': self.CHEF_RECIPE}
 
     def param_Tag(self):
         """Stack tag."""
         if not self.STACK_TAG:
-            raise ValueError('STACK_TAG not set for %s'%self.__class__.__name__)
+            raise ValueError('STACK_TAG not set for {}'.format(self.__class__.__name__))
         return {'Type': 'String', 'Default': self.STACK_TAG}
 
     def param_Env(self):
