@@ -32,6 +32,8 @@ class AppStack(Stack):
 
     def Parameters(self):
         params = {
+            'VpcId': self.template.vpc(),
+            'KeyName': Ref(self.template.param_KeyName()),
             'AmiId': FindInRegionMap(self.template.map_RegionMap(), 'AmiId'),
             'SubnetA': Ref(self.template.subnet_SubnetA()),
             'SubnetB': Ref(self.template.subnet_SubnetB()),
