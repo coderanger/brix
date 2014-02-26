@@ -311,6 +311,7 @@ class AppTemplate(Template):
     """A model for Cloud Formation stack for a Balanced application."""
 
     # Parameter defaults
+    ENV = 'production'
     CHEF_RECIPE = None
     STACK_TAG = None
     INSTANCE_TYPE = 'm1.small'
@@ -338,7 +339,7 @@ class AppTemplate(Template):
 
     def param_ChefEnv(self):
         """Configuration environment."""
-        return {'Type': 'String', 'Default': 'production'}
+        return {'Type': 'String', 'Default': self.ENV}
 
     def param_InstanceType(self):
         """Instance type."""
