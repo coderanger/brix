@@ -492,4 +492,6 @@ class AppTemplate(Template):
         """Autoscaling group."""
         return {
             'Description': 'Autoscaling group for {}'.format(self.__class__.__name__),
+            'MinSize': Ref(self.param_Capacity()),
+            'MaxSize': Ref(self.param_Capacity()),
         }
