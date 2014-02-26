@@ -24,7 +24,10 @@ class BalancedApi(AppTemplate):
 
     CHEF_RECIPE = 'role-balanced-api'
     STACK_TAG = 'bapi'
+    INSTANCE_TYPE = 'm3.large'
+    PORT = 5000
+    CITADEL_FOLDERS = ['omnibus']
 
 
 if __name__ == '__main__':
-    print(BalancedDocs().to_json())
+    print(BalancedApi().to_json())
