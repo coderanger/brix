@@ -68,6 +68,7 @@ class SecurityGroup(ConditionalAZMixin, stratosphere.ec2.SecurityGroup):
         self._allow = kwargs.pop('Allow', [])
         self._allow_self = kwargs.pop('AllowSelf', True)
         self._allow_ssh = kwargs.pop('AllowSSH', False)
+        self._gateway_ssh = kwargs.pop('GatewaySSH', True)
         super(SecurityGroup, self).__init__(*args, **kwargs)
 
     def VpcId(self):
@@ -90,7 +91,7 @@ class SecurityGroup(ConditionalAZMixin, stratosphere.ec2.SecurityGroup):
                 ToPort='22',
                 CidrIp='0.0.0.0/0',
             ))
-        else:
+        elif self._gateway_ssh:
             if self._cond_a:
                 rules.append(If(
                     self._cond_a,
