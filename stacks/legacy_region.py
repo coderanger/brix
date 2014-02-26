@@ -24,7 +24,6 @@ from .base import Stack
 
 class AppStack(Stack):
     def __init__(self, *args, **kwargs):
-        self._parameters = kwargs.pop('Parameters', {})
         super(AppStack, self).__init__(*args, **kwargs)
 
     def DependsOn(self):
