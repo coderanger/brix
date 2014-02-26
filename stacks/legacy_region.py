@@ -19,7 +19,6 @@
 from troposphere import FindInMap, GetAtt, Join, Ref
 
 from .balanced_region import BalancedRegionBase, FindInRegionMap
-from .base import Template
 
 
 class LegacyRegionTemplate(BalancedRegionBase):
@@ -37,9 +36,7 @@ class LegacyRegionTemplate(BalancedRegionBase):
                 'AmiId': FindInRegionMap(self.map_RegionMap(), 'AmiId'),
                 'SubnetA': '',
                 'SubnetB': '',
-                'SubnetC': '',
                 'GatewaySecurityGroupA': '',
                 'GatewaySecurityGroupB': '',
-                'GatewaySecurityGroupC': '',
             },
         }
