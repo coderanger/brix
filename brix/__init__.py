@@ -142,12 +142,12 @@ class Brix(object):
                 existing_params = {p.key: p.value for p in stack.parameters}
                 existing_params.update(params)
                 params = existing_params
-            if not template_name:
-                template_name = stack.tags.get('TemplateName')
+            # if not template_name:
+            #     template_name = stack.tags.get('TemplateName')
             print('Updating stack {} in {}'.format(stack_name, self.region))
         except boto.exception.BotoServerError:
             operation = 'create_stack'
-            kwargs = {'disable_rollback': True, 'tags': {'TemplateName': template_name}}
+            kwargs = {'disable_rollback': True}#, 'tags': {'TemplateName': template_name}}
             print('Creating stack {} in {}'.format(stack_name, self.region))
         if not template_name:
             raise ValueError('Template name for stack {} is required'.format(stack_name))
