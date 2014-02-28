@@ -487,38 +487,6 @@ class AppTemplate(RoleMixin, Template):
             'SecurityGroup': Ref(self.sg_LoadBalancerSecurityGroup()),
         }
 
-    # TODO: this needs an overhaul
-    def role(self):
-        """IAM role for Balanced docs."""
-        citadel_folders = ['newrelic', 'deploy_key'] + self.CITADEL_FOLDERS
-        s3_buckets = ['balanced-citadel/{}'.format(s) for s in citadel_folders] + ['balanced.debs', 'apt.vandelay.io'] + self.S3_BUCKETS
-        s3_objects = ['arn:aws:s3:::{}/*'.format(s) for s in s3_buckets]
-        return {
-            'Statements': [
-                {
-                    'Effect': 'Allow',
-                    'Action': 's3:GetObject',
-                    'Resource': s3_objects,
-                },
-                {
-                    'Effect': 'Allow',
-                    'Action': [
-                        'route53:GetHostedZone',
-                        'route53:ListResourceRecordSets',
-                        'route53:ChangeResourceRecordSets',
-                  ],
-                  'Resource': 'arn:aws:route53:::hostedzone/Z2IP8RX9IARH86',
-                },
-            ] + self.IAM_STATEMENTS,
-        }
-
-    def insp(self):
-        """IAM instance profile."""
-        return {
-            'Description': 'IAM instance profile for {}'.format(self.__class__.__name__),
-            'Roles': [Ref(self.role())],
-        }
-
     def lc(self):
         """ASG launch configuration."""
         return {
