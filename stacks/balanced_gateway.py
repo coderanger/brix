@@ -21,7 +21,7 @@ from troposphere.ec2 import NetworkInterfaceProperty
 
 import stratosphere
 
-from .base import Template
+from .base import Template, RoleMixin
 
 class GatewayInstance(stratosphere.ec2.Instance):
     def AvailabilityZone(self):
@@ -57,7 +57,7 @@ class GatewayInstance(stratosphere.ec2.Instance):
         ]))
 
 
-class BalancedGateway(Template):
+class BalancedGateway(RoleMixin, Template):
     """NAT gateway configuration."""
 
     def param_AvailabilityZone(self):
@@ -94,36 +94,6 @@ class BalancedGateway(Template):
     def sg(self):
         """Security group for gateway instance."""
         return {'AllowSSH': True}
-
-    def role(self):
-        """IAM role for gateway instance."""
-        return {
-            'Statements': [
-                {
-                    'Effect': 'Allow',
-                    'Action': 's3:GetObject',
-                    'Resource': [
-                        "arn:aws:s3:::balanced-citadel/newrelic/*",
-                        "arn:aws:s3:::balanced-citadel/deploy_key/*",
-                        "arn:aws:s3:::balanced.debs/*",
-                        "arn:aws:s3:::apt.vandelay.io/*",
-                    ],
-                },
-                {
-                    'Effect': 'Allow',
-                    'Action': [
-                        'route53:GetHostedZone',
-                        'route53:ListResourceRecordSets',
-                        'route53:ChangeResourceRecordSets',
-                  ],
-                  'Resource': 'arn:aws:route53:::hostedzone/Z2IP8RX9IARH86',
-                },
-            ],
-        }
-
-    def insp(self):
-        """IAM instance profile for gateway instance."""
-        return {'Roles': [Ref(self.role())]}
 
     def instance(self):
         """EC2 instance serving as a NAT gateway."""
