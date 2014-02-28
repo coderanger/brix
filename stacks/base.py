@@ -155,15 +155,15 @@ class SecurityGroup(ConditionalAZMixin, stratosphere.ec2.SecurityGroup):
 
 class LoadBalancer(ConditionalAZMixin, stratosphere.elasticloadbalancing.LoadBalancer):
     def __init__(self, *args, **kwargs):
+        self._scheme = kwargs.pop('Scheme', 'internal')
         self._port = kwargs.pop('Port', '80')
-        self._ssl_certificate_id = kwargs.pop('SSLCertificateId', 'balancedpayments-2014')
+        self._ssl_certificate_id = kwargs.pop('SSLCertificateId', None)
         self._security_group = kwargs.pop('SecurityGroup', None)
         self._health_url = kwargs.pop('HealthUrl', '/health')
         super(LoadBalancer, self).__init__(*args, **kwargs)
 
-    def CrossZone(self):
-        # Why the bloody hell is this false by default?
-        return True
+    def Scheme(self):
+        return self._scheme
 
     def SecurityGroups(self):
         if self._security_group:
@@ -209,12 +209,16 @@ class LoadBalancer(ConditionalAZMixin, stratosphere.elasticloadbalancing.LoadBal
 
     def Subnets(self):
         subnets = []
-        if self._cond_a:
-            subnets.append(If(self._cond_a, self._subnet_a, Ref('AWS::NoValue')))
-        if self._cond_b:
-            subnets.append(If(self._cond_b, self._subnet_b, Ref('AWS::NoValue')))
-        if self._cond_c:
-            subnets.append(If(self._cond_c, self._subnet_c, Ref('AWS::NoValue')))
+        possible_subnets = [
+            (self._cond_a, self._subnet_a, self._public_subnet_a),
+            (self._cond_b, self._subnet_b, self._public_subnet_b),
+            (self._cond_c, self._subnet_c, self._public_subnet_c),
+        ]
+        for cond, subnet, public_subnet in possible_subnets:
+            if cond:
+                if self._scheme != 'internal':
+                    subnet = public_subnet
+                subnets.append(If(cond, subnet, NoValue))
         return subnets
 
 
@@ -375,9 +379,8 @@ class AppTemplate(RoleMixin, Template):
     STACK_TAG = None
     INSTANCE_TYPE = 'm1.small'
     CAPACITY = 1
-    CITADEL_FOLDERS = []
-    S3_BUCKETS = []
-    IAM_STATEMENTS = []
+    PUBLIC = False
+
     PORT = 80
 
     def param_ChefRecipe(self):
@@ -422,6 +425,18 @@ class AppTemplate(RoleMixin, Template):
 
     def param_SubnetC(self):
         """Subnet ID for AZ C. Optional."""
+        return {'Type': 'String', 'Default': ''}
+
+    def param_PublicSubnetA(self):
+        """Public subnet ID for AZ A. Optional."""
+        return {'Type': 'String', 'Default': ''}
+
+    def param_PublicSubnetB(self):
+        """Public subnet ID for AZ B. Optional."""
+        return {'Type': 'String', 'Default': ''}
+
+    def param_PublicSubnetC(self):
+        """Public subnet ID for AZ C. Optional."""
         return {'Type': 'String', 'Default': ''}
 
     def param_GatewaySecurityGroupA(self):
@@ -472,16 +487,16 @@ class AppTemplate(RoleMixin, Template):
         """Load balanacer security group."""
         return {
             'Description': 'Security group for {} load balancer'.format(self.__class__.__name__),
-            'Allow': [80, 443],
+            'Allow': [80],
             'GatewaySSH': False,
             'AllowSelf': False,
         }
-
 
     def elb(self):
         """Load balancer."""
         return {
             'Description': 'Load balancer for {}'.format(self.__class__.__name__),
+            'Scheme': None if self.PUBLIC else 'internal',
             'HealthUrl': '/health',
             'Port': self.PORT,
             'SecurityGroup': Ref(self.sg_LoadBalancerSecurityGroup()),

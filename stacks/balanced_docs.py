@@ -25,12 +25,14 @@ class BalancedDocs(AppTemplate):
     ENV = 'misc'
     CHEF_RECIPE = 'balanced-docs'
     STACK_TAG = 'docs'
+    PUBLIC = True
 
     def elb(self):
         """Load balancer for BalancedDocs."""
-        return {
-            'HealthUrl': '/',
-        }
+        elb = super(BalancedDocs, self).elb()
+        elb['HealthUrl'] = '/'
+        elb['SSLCertificateId'] = 'balancedpayments-2014'
+        return elb
 
 
 if __name__ == '__main__':
