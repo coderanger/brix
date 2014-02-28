@@ -17,7 +17,7 @@
 #
 
 import troposphere.elasticloadbalancing
-from troposphere import If, Ref, Join, Base64
+from troposphere import If, GetAtt, Ref, Join, Base64
 
 import stratosphere
 from stratosphere.functions import And, Equals, Not, NoValue
@@ -456,6 +456,10 @@ class AppTemplate(RoleMixin, Template):
             Not(Equals(Ref(self.param_SubnetC()), '')),
             Not(Equals(Ref(self.param_GatewaySecurityGroupC()), '')),
         )
+
+    def out_ELBHostname(self):
+        """Return the hostname of the ELB for later use."""
+        return {'Value': GetAtt(self.elb(), 'DNSName')}
 
     def sg(self):
         """Security group."""
