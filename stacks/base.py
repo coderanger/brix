@@ -311,6 +311,7 @@ class Stack(stratosphere.cloudformation.Stack):
 
 class Template(stratosphere.Template):
     """Defaults and mixins for Balanced templates."""
+    ABSTRACT = True
 
     AUTO_SCALING_GROUP_TYPE = AutoScalingGroup
     LOAD_BALANCER_TYPE = LoadBalancer
@@ -329,6 +330,7 @@ class Template(stratosphere.Template):
 
 class AppTemplate(Template):
     """A model for Cloud Formation stack for a Balanced application."""
+    ABSTRACT = True
 
     # Parameter defaults
     ENV = 'production'
