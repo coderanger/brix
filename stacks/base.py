@@ -26,40 +26,27 @@ from stratosphere.functions import And, Equals, Not, NoValue
 class ConditionalAZMixin(object):
     """A mixing to load some default parameters for multi-AZ objects."""
 
+    CONDITIONAL_AZ_ATTRS = ['cond', 'subnet', 'public_subnet', 'gateway_security_group']
+    AZS = ['a', 'b', 'c']
+
     def __init__(self, *args, **kwargs):
         template = kwargs.get('template')
-        self._cond_a = kwargs.pop('CondA', None)
-        self._cond_b = kwargs.pop('CondB', None)
-        self._cond_c = kwargs.pop('CondC', None)
-        self._subnet_a = kwargs.pop('SubnetA', None)
-        self._subnet_b = kwargs.pop('SubnetB', None)
-        self._subnet_c = kwargs.pop('SubnetC', None)
-        self._gateway_security_group_a = kwargs.pop('GatewaySecurityGroupA', None)
-        self._gateway_security_group_b = kwargs.pop('GatewaySecurityGroupB', None)
-        self._gateway_security_group_c = kwargs.pop('GatewaySecurityGroupC', None)
-
-        if template:
-            if not self._cond_a and hasattr(template, 'cond_HasA'):
-                self._cond_a = 'HasA'
-            if not self._cond_b and hasattr(template, 'cond_HasB'):
-                self._cond_b = 'HasB'
-            if not self._cond_c and hasattr(template, 'cond_HasC'):
-                self._cond_c = 'HasC'
-
-            if not self._subnet_a and hasattr(template, 'param_SubnetA'):
-                self._subnet_a = Ref(template.param_SubnetA())
-            if not self._subnet_b and hasattr(template, 'param_SubnetB'):
-                self._subnet_b = Ref(template.param_SubnetB())
-            if not self._subnet_c and hasattr(template, 'param_SubnetC'):
-                self._subnet_c = Ref(template.param_SubnetC())
-
-            if not self._gateway_security_group_a and hasattr(template, 'param_GatewaySecurityGroupA'):
-                self._gateway_security_group_a = Ref(template.param_GatewaySecurityGroupA())
-            if not self._gateway_security_group_b and hasattr(template, 'param_GatewaySecurityGroupB'):
-                self._gateway_security_group_b = Ref(template.param_GatewaySecurityGroupB())
-            if not self._gateway_security_group_c and hasattr(template, 'param_GatewaySecurityGroupC'):
-                self._gateway_security_group_c = Ref(template.param_GatewaySecurityGroupC())
-
+        for attr in self.CONDITIONAL_AZ_ATTRS:
+            for az in self.AZS:
+                camel = ''.join(s.capitalize() for s in attr.split('_')) + az.upper()
+                value = None
+                if camel in kwargs:
+                    value = kwargs.pop(camel)
+                elif template:
+                    template_attr = 'param_{}'.format(camel)
+                    if attr == 'cond':
+                        template_attr = 'cond_Has{}'.format(az.upper())
+                    if hasattr(template, template_attr):
+                        if attr == 'cond':
+                            value = 'Has{}'.format(az.upper())
+                        else:
+                            value = Ref(getattr(template, template_attr)())
+                setattr(self, '_{}_{}'.format(attr, az), value)
         super(ConditionalAZMixin, self).__init__(*args, **kwargs)
 
 
