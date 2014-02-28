@@ -20,7 +20,7 @@ import troposphere.elasticloadbalancing
 from troposphere import If, Ref, Join, Base64
 
 import stratosphere
-from stratosphere.functions import And, Equals, Not
+from stratosphere.functions import And, Equals, Not, NoValue
 
 
 class ConditionalAZMixin(object):
@@ -102,7 +102,7 @@ class SecurityGroup(ConditionalAZMixin, stratosphere.ec2.SecurityGroup):
                         ToPort='22',
                         SourceSecurityGroupId=self._gateway_security_group_a,
                     ),
-                    Ref('AWS::NoValue')
+                    NoValue
                 ))
             if self._cond_b:
                 rules.append(If(
@@ -114,7 +114,7 @@ class SecurityGroup(ConditionalAZMixin, stratosphere.ec2.SecurityGroup):
                         ToPort='22',
                         SourceSecurityGroupId=self._gateway_security_group_b,
                     ),
-                    Ref('AWS::NoValue')
+                    NoValue
                 ))
             if self._cond_c:
                 rules.append(If(
@@ -126,7 +126,7 @@ class SecurityGroup(ConditionalAZMixin, stratosphere.ec2.SecurityGroup):
                         ToPort='22',
                         SourceSecurityGroupId=self._gateway_security_group_c,
                     ),
-                    Ref('AWS::NoValue')
+                    NoValue
                 ))
         for port in self._allow:
             rules.append(stratosphere.ec2.SecurityGroupRule(
@@ -263,11 +263,11 @@ class AutoScalingGroup(ConditionalAZMixin, stratosphere.autoscaling.AutoScalingG
     def AvailabilityZones(self):
         zones = []
         if self._cond_a:
-            zones.append(If(self._cond_a, Join('', [Ref('AWS::Region'), 'a']), Ref('AWS::NoValue')))
+            zones.append(If(self._cond_a, Join('', [Ref('AWS::Region'), 'a']), NoValue))
         if self._cond_b:
-            zones.append(If(self._cond_b, Join('', [Ref('AWS::Region'), 'b']), Ref('AWS::NoValue')))
+            zones.append(If(self._cond_b, Join('', [Ref('AWS::Region'), 'b']), NoValue))
         if self._cond_c:
-            zones.append(If(self._cond_c, Join('', [Ref('AWS::Region'), 'c']), Ref('AWS::NoValue')))
+            zones.append(If(self._cond_c, Join('', [Ref('AWS::Region'), 'c']), NoValue))
         return zones
 
     def LaunchConfigurationName(self):
@@ -285,11 +285,11 @@ class AutoScalingGroup(ConditionalAZMixin, stratosphere.autoscaling.AutoScalingG
     def VPCZoneIdentifier(self):
         subnets = []
         if self._cond_a:
-            subnets.append(If(self._cond_a, self._subnet_a, Ref('AWS::NoValue')))
+            subnets.append(If(self._cond_a, self._subnet_a, NoValue))
         if self._cond_b:
-            subnets.append(If(self._cond_b, self._subnet_b, Ref('AWS::NoValue')))
+            subnets.append(If(self._cond_b, self._subnet_b, NoValue))
         if self._cond_c:
-            subnets.append(If(self._cond_c, self._subnet_c, Ref('AWS::NoValue')))
+            subnets.append(If(self._cond_c, self._subnet_c, NoValue))
         return subnets
 
 
