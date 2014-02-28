@@ -1,2 +1,2 @@
--e git+https://github.com/balanced/stratosphere.git
+-e git+https://github.com/balanced/stratosphere.git#egg=stratosphere
 -e .
