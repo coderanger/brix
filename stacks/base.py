@@ -487,9 +487,12 @@ class AppTemplate(RoleMixin, Template):
 
     def sg_LoadBalancerSecurityGroup(self):
         """Load balanacer security group."""
+        ports = [80]
+        if self.PUBLIC:
+            ports.append(443)
         return {
             'Description': 'Security group for {} load balancer'.format(self.__class__.__name__),
-            'Allow': [80],
+            'Allow': ports,
             'GatewaySSH': False,
             'AllowSelf': False,
         }

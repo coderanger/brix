@@ -30,8 +30,8 @@ class BalancedDocs(AppTemplate):
     def elb(self):
         """Load balancer for BalancedDocs."""
         elb = super(BalancedDocs, self).elb()
-        elb['HealthUrl'] = '/'
-        elb['SSLCertificateId'] = 'balancedpayments-2014'
+        elb['HealthUrl'] = '/__health__'
+        elb['SSLCertificateId'] = 'balancedpayments-ev-2014'
         return elb
 
 
