@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-from troposphere import FindInMap, GetAtt, Join, Ref
+from stratosphere import Ref
 
 from .balanced_region import BalancedRegionBase, FindInRegionMap
 from .base import Stack
@@ -48,9 +48,11 @@ class LegacyRegionTemplate(BalancedRegionBase):
 
     @classmethod
     def STRATOSPHERE_TYPES(cls):
-        return BalancedRegionBase.STRATOSPHERE_TYPES() + [
-            ('app', 'apps', 'add_resource', AppStack),
-        ]
+        types = BalancedRegionBase.STRATOSPHERE_TYPES()
+        types.update({
+            'app': AppStack,
+        })
+        return types
 
     def vpc(self):
         return 'vpc-d6832dbf'

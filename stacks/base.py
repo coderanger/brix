@@ -17,10 +17,9 @@
 #
 
 import troposphere.elasticloadbalancing
-from troposphere import If, GetAtt, Ref, Join, Base64
 
 import stratosphere
-from stratosphere.functions import And, Equals, Not, NoValue
+from stratosphere import And, Equals, Not, NoValue, If, GetAtt, Ref, Join, Base64
 
 
 class ConditionalAZMixin(object):
@@ -315,13 +314,18 @@ class Stack(stratosphere.cloudformation.Stack):
 
 class Template(stratosphere.Template):
     """Defaults and mixins for Balanced templates."""
-    ABSTRACT = True
 
-    AUTO_SCALING_GROUP_TYPE = AutoScalingGroup
-    LOAD_BALANCER_TYPE = LoadBalancer
-    LAUNCH_CONFIGURATION_TYPE = LaunchConfiguration
-    SECURITY_GROUP_TYPE = SecurityGroup
-    STACK_TYPE = Stack
+    @classmethod
+    def STRATOSPHERE_TYPES(cls):
+        types = stratosphere.Template.STRATOSPHERE_TYPES()
+        types.update({
+            'asg': AutoScalingGroup,
+            'elb': LoadBalancer,
+            'lc': LaunchConfiguration,
+            'sg': SecurityGroup,
+            'stack': Stack,
+        })
+        return types
 
     def param_VpcId(self):
         """VPC ID."""
@@ -332,7 +336,7 @@ class Template(stratosphere.Template):
         return {'Type': 'String', 'Default': 'cloudformation'}
 
 
-class RoleMixin(object):
+class RoleMixin(stratosphere.Template):
     CITADEL_FOLDERS = []
     S3_BUCKETS = []
     IAM_STATEMENTS = []
@@ -371,7 +375,6 @@ class RoleMixin(object):
 
 class AppTemplate(RoleMixin, Template):
     """A model for Cloud Formation stack for a Balanced application."""
-    ABSTRACT = True
 
     # Parameter defaults
     ENV = 'production'
@@ -380,7 +383,6 @@ class AppTemplate(RoleMixin, Template):
     INSTANCE_TYPE = 'm1.small'
     CAPACITY = 1
     PUBLIC = False
-
     PORT = 80
 
     def param_ChefRecipe(self):

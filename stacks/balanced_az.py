@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-from troposphere import GetAtt, Ref
+from stratosphere import GetAtt, Ref
 
 from .base import Template
 

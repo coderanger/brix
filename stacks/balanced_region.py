@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-from troposphere import FindInMap, GetAtt, Join, Ref
+from stratosphere import FindInMap, GetAtt, Join, Ref
 
 from .base import Template
 
