@@ -38,6 +38,8 @@ class AppStack(Stack):
             'SubnetB': Ref(self.template.subnet_SubnetB()),
             'GatewaySecurityGroupA': 'sg-cdbdafa1',
             'GatewaySecurityGroupB': 'sg-cdbdafa1',
+            'PublicSubnetA': 'subnet-ae832dc7',
+            'PublicSubnetB': 'subnet-5a812f33',
         }
         params.update(self._parameters)
         return params
