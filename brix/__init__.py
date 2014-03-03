@@ -64,6 +64,7 @@ class Brix(object):
         'balanced_az',
         'balanced_gateway',
         'balanced_docs',
+        'balanced_proxy',
         'balanced_api',
     ]
 

@@ -95,9 +95,9 @@ class LegacyRegionTemplate(BalancedRegionBase):
             'SubnetId': Ref(self.subnet_SubnetB()),
         }
 
-    def app_BalancedDocs(self):
-        """Balanced documentation stack."""
-        return {'TemplateName': 'balanced_docs'}
+    def app_BalancedProxy(self):
+        """Balanced Proxy production stack."""
+        return {'TemplateName': 'balanced_proxy'}
 
     def app_BalancedApiProduction(self):
         """Balanced API production stack."""
@@ -120,3 +120,8 @@ class LegacyRegionTemplate(BalancedRegionBase):
                 'Capacity': 2,
             },
         }
+
+    def app_BalancedDocs(self):
+        """Balanced documentation stack."""
+        return {'TemplateName': 'balanced_docs'}
+
