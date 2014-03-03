@@ -21,7 +21,7 @@ class PyTest(TestCommand):
 setup(
     name = 'balanced-infra',
     version = '1.0-dev',
-    packages = find_packages(),
+    packages = ['brix'],
     author = 'Noah Kantrowitz',
     author_email = 'noah@coderanger.net',
     description = 'Balanced infrastructure stuff.',

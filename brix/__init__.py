@@ -213,8 +213,8 @@ class Brix(object):
         """Load all known templates and compute some data about them."""
         templates = {}
         # HAXXXXXX :-(
-        import stacks.base
-        stacks.base.Stack.TEMPLATES = templates
+        from templates import base
+        base.Stack.TEMPLATES = templates
         for name in reversed(self.TEMPLATES):
             template_data = {'name': name}
             try:
@@ -230,7 +230,7 @@ class Brix(object):
     def _load_template(self, name):
         """Given a module name, return the template class."""
         # Mahmoud, be mad ;-)
-        mod = importlib.import_module('stacks.{0}'.format(name), __package__)
+        mod = importlib.import_module('templates.{0}'.format(name), __package__)
         templates = {}
         def massage_name(name):
             return name.lower().replace('_', '')
