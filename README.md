@@ -75,10 +75,10 @@ result in errors if you reference an un-synced template from your stack. The
 `--param` argument can be used to pass parameters to the stack. When updating an
 existing stack, all existing parameters will be copied over.
 
-Adding A Template
------------------
+## Adding A Template
 
 To add a new template you need to:
+
 1. Add a new Python file containing a subclass of Template (see `balanced_docs.py` for an example).
 2. Update `balanced_region.py` and/or `legacy_region.py` to deploy the required static stacks based on #1.
 3. Update `brix/__init__.py` to include your new file in the `TEMPLATES` list.
