@@ -88,7 +88,7 @@ To add a new template you need to:
 The `packer/` folder contains templates and scripts to build an AMI to use as
 our base image. To build the image you need the validation key (`validation.pem`)
 as well as the AWS certificate and key (`balanced-aws.crt` and `balanced-aws.key`,
-as Noah for these). Put all three of those in `packer/` folder and ensure your
+ask Noah for these). Put all three of those in `packer/` folder and ensure your
 `$AWS_ACCESS_KEY_ID` and `$AWS_SECRET_ACCESS_KEY` environment variables are set.
 
 To verify everything is all set:
