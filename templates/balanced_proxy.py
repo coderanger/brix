@@ -26,7 +26,7 @@ class BalancedProxy(AppTemplate):
     STACK_TAG = 'bpxy'
     INSTANCE_TYPE = 'm3.medium'
     PUBLIC = True
-    CAPCITY = 2
+    CAPACITY = 2
 
     def elb(self):
         """Load balancer for BalancedProxy."""
