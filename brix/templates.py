@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import importlib
 import hashlib
 import json
 import os
@@ -71,15 +70,17 @@ class Template(object):
             self.error = sys.exc_info()
 
     def _load_py(self):
-        # Load the template module
+        # Run the template code
         load_path = os.path.dirname(self.path)
         sys.path.insert(0, load_path)
         try:
-            mod = importlib.import_module(self.name, __package__)
+            code = compile(open(self.path, 'rb').read(), self.path, 'exec')
+            locals_ = {}
+            exec(code, {}, locals_)
         finally:
             sys.path.pop(0)
-        # Find the template class
-        self.template = getattr(mod, 'template', None)
+        # Find the template object
+        self.template = locals_.get('template')
         if not self.template:
             raise ValueError('Unable to find a template when loading {}'.format(self.name))
         self.json = self.template.to_json()

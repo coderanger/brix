@@ -20,7 +20,7 @@ from ._base import BaseTemplate
 
 
 class TemplateA(BaseTemplate):
-    """A blank template."""
+    """A really blank template."""
 
 
 template = TemplateA()

@@ -77,17 +77,17 @@ class TestTemplate(object):
             'Description': 'A really blank template.',
             'Resources': {},
         }
-        assert tpl.sha1 == '9f494e946f18781e388ede5870957261f77fed82'
-        assert tpl.s3_key == 'templates/template_a-9f494e946f18781e388ede5870957261f77fed82.json'
+        assert tpl.sha1 == 'b8ff648e601630c0768f325c82f385b505493939'
+        assert tpl.s3_key == 'templates/template_a-b8ff648e601630c0768f325c82f385b505493939.json'
 
     def test_template_2_b(self):
         tpl = Template(os.path.join(DATA_PATH, 'templates2', 'template_b.py'))
         assert not tpl.error
-        assert tpl.name == 'template_a'
+        assert tpl.name == 'template_b'
         assert isinstance(tpl.template, troposphere.Template)
         assert json.loads(tpl.json) == {
             'Description': 'A very blank template.',
             'Resources': {},
         }
-        assert tpl.sha1 == '9f494e946f18781e388ede5870957261f77fed82'
-        assert tpl.s3_key == 'templates/template_a-9f494e946f18781e388ede5870957261f77fed82.json'
+        assert tpl.sha1 == 'c640245712222274998b4df6305bf09a8eb82841'
+        assert tpl.s3_key == 'templates/template_b-c640245712222274998b4df6305bf09a8eb82841.json'
