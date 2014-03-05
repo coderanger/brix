@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-from _base import BaseTemplate
+from ._base import BaseTemplate
 
 
 class TemplateA(BaseTemplate):
