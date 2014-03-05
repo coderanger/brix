@@ -71,14 +71,17 @@ class Template(object):
 
     def _load_py(self):
         # Run the template code
-        load_path = os.path.dirname(self.path)
-        sys.path.insert(0, load_path)
+        locals_ = {}
+        old_path = sys.path[:]
+        old_mods = sys.modules.copy()
         try:
+            sys.path.insert(0, os.path.dirname(self.path))
             code = compile(open(self.path, 'rb').read(), self.path, 'exec')
-            locals_ = {}
             exec(code, {}, locals_)
         finally:
-            sys.path.remove(load_path)
+            sys.path[:] = old_path
+            sys.modules.clear()
+            sys.modules.update(old_mods)
         # Find the template object
         self.template = locals_.get('template')
         if not self.template:
