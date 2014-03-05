@@ -77,7 +77,8 @@ class Template(object):
         old_mods = sys.modules.copy()
         try:
             sys.path.insert(0, os.path.dirname(self.path))
-            code = compile(open(self.path, 'rb').read(), self.path, 'exec')
+            with open(self.path, 'rb') as f:
+                code = compile(f.read(), self.path, 'exec')
             exec(code, {}, locals_)
         finally:
             sys.path[:] = old_path
