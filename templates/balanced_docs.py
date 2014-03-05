@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-from .base import AppTemplate
+from ._base import AppTemplate
 
 
 class BalancedDocs(AppTemplate):

@@ -18,7 +18,7 @@
 
 from stratosphere import FindInMap, GetAtt, Join, Ref
 
-from .base import Template
+from ._base import Template
 
 
 def FindInRegionMap(map, key):

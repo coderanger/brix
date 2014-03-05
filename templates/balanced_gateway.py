@@ -21,7 +21,7 @@ from troposphere.ec2 import NetworkInterfaceProperty
 import stratosphere
 from stratosphere import Base64, Ref
 
-from .base import Template, RoleMixin
+from ._base import Template, RoleMixin
 
 
 class GatewayInstance(stratosphere.ec2.Instance):

@@ -18,7 +18,7 @@
 
 from stratosphere import GetAtt, Ref
 
-from .base import Template
+from ._base import Template
 
 
 class BalancedAZTemplate(Template):
