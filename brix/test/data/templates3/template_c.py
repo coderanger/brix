@@ -20,7 +20,7 @@ from ._base import BaseTemplate
 
 
 class TemplateC(BaseTemplate):
-    """A that overrides."""
+    """A template that overrides."""
 
     def param_Foo(self):
         """Override parameter."""

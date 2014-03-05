@@ -20,7 +20,7 @@ from ._base import BaseTemplate
 
 
 class TemplateB(BaseTemplate):
-    """A that extends."""
+    """A template that extends."""
 
     def param_Bar(self):
         """Extended parameter."""
