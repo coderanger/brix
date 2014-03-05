@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import collections
 import hashlib
 import json
 import os
@@ -26,7 +27,7 @@ class UnknownTemplateType(Exception):
     """Token exception for trying to load an unknown file type."""
 
 
-class TemplateLibrary(dict):
+class TemplateLibrary(collections.OrderedDict):
     """A library of Stratosphere templates."""
 
     def __init__(self, path, load=True):
@@ -44,7 +45,7 @@ class TemplateLibrary(dict):
             self[template.name] = template
 
     def _find_templates(self):
-        for path in os.listdir(self.path):
+        for path in sorted(os.listdir(self.path)):
             name, ext = os.path.splitext(path)
             if name.startswith('_') or name.startswith('.'):
                 continue

@@ -64,11 +64,11 @@ class TestTemplateLibrary(object):
 
     def test_load_templates_2(self, library2):
         lib = TemplateLibrary(library2)
-        assert sorted(lib.keys()) == ['template_a', 'template_b']
+        assert lib.keys() == ['template_a', 'template_b']
 
     def test_load_templates_3(self, library3):
         lib = TemplateLibrary(library3)
-        assert sorted(lib.keys()) == ['template_a', 'template_b', 'template_c']
+        assert lib.keys() == ['template_a', 'template_b', 'template_c']
 
 
 class TestTemplate(object):
