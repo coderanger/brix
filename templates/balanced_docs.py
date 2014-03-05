@@ -35,5 +35,6 @@ class BalancedDocs(AppTemplate):
         return elb
 
 
+template = BalancedDocs()
 if __name__ == '__main__':
-    print(BalancedDocs().to_json())
+    print(template.to_json())

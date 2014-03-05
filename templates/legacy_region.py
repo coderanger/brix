@@ -18,8 +18,8 @@
 
 from stratosphere import Ref
 
-from .balanced_region import BalancedRegionBase, FindInRegionMap
-from .base import Stack
+from .future.balanced_region import BalancedRegionBase, FindInRegionMap
+from ._base import Stack
 
 
 class AppStack(Stack):
@@ -95,28 +95,32 @@ class LegacyRegionTemplate(BalancedRegionBase):
             'SubnetId': Ref(self.subnet_SubnetB()),
         }
 
-    def app_BalancedDocs(self):
-        """Balanced documentation stack."""
-        return {'TemplateName': 'balanced_docs'}
+    # def app_BalancedDocs(self):
+    #     """Balanced documentation stack."""
+    #     return {'TemplateName': 'balanced_docs'}
 
-    def app_BalancedApiProduction(self):
-        """Balanced API production stack."""
-        return {
-            'TemplateName': 'balanced_api',
-            'Parameters': {
-                'Env': 'production',
-                'ChefEnv': 'production',
-                'Capacity': 4,
-            },
-        }
+    # def app_BalancedApiProduction(self):
+    #     """Balanced API production stack."""
+    #     return {
+    #         'TemplateName': 'balanced_api',
+    #         'Parameters': {
+    #             'Env': 'production',
+    #             'ChefEnv': 'production',
+    #             'Capacity': 4,
+    #         },
+    #     }
 
-    def app_BalancedApiTest(self):
-        """Balanced API test stack."""
-        return {
-            'TemplateName': 'balanced_api',
-            'Parameters': {
-                'Env': 'test',
-                'ChefEnv': 'test',
-                'Capacity': 2,
-            },
-        }
+    # def app_BalancedApiTest(self):
+    #     """Balanced API test stack."""
+    #     return {
+    #         'TemplateName': 'balanced_api',
+    #         'Parameters': {
+    #             'Env': 'test',
+    #             'ChefEnv': 'test',
+    #             'Capacity': 2,
+    #         },
+    #     }
+
+template = LegacyRegionTemplate()
+if __name__ == '__main__':
+    print(template.to_json())

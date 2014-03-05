@@ -29,5 +29,6 @@ class BalancedApi(AppTemplate):
     CITADEL_FOLDERS = ['omnibus']
 
 
+template = BalancedApi()
 if __name__ == '__main__':
-    print(BalancedApi().to_json())
+    print(template.to_json())

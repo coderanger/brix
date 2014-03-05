@@ -17,9 +17,9 @@
 #
 
 """Usage:
-  brix [options] validate [--full]
+  brix [options] validate [--full] [<template>...]
   brix [options] show <name>
-  brix [options] sync
+  brix [options] sync [<template>...]
   brix [options] update [--no-sync --param=KEY:VALUE...] <stack> [<template>]
   brix [options] diff <stack> [<template>]
   brix [options] stacks
@@ -56,6 +56,8 @@ import boto.exception
 import docopt
 import troposphere
 
+from templates import TemplateLibrary
+
 
 class Brix(object):
     TEMPLATES = [
@@ -87,14 +89,14 @@ class Brix(object):
         self.cfn = boto.connect_cloudformation(self.access_key_id, self.secret_access_key, region=r)
         self.s3 = boto.connect_s3(self.access_key_id, self.secret_access_key)
         # Load and render all templates
-        self.templates = self._load_templates()
+        self.templates = TemplateLibrary(os.path.abspath(os.path.join(__file__, '..', '..', 'templates')))
 
-    def validate(self, quiet=False, full=False):
+    def validate(self, names=None, quiet=False, full=False):
         error = False
-        for name, data in self.templates.iteritems():
-            if 'error' in data:
+        for tpl in self._get_templates(names):
+            if tpl.error:
+                print("{} error: {}".format(tpl.name, tpl.error[1]))
                 error = True
-                print("{} error: {}".format(name, data['error'][1]))
                 continue
             if full:
                 # Run server-based validation
@@ -102,38 +104,38 @@ class Brix(object):
                 # length limits.
                 bucket = self.s3.get_bucket('balanced-cfn-us-east-1')
                 key = bucket.get_key('validation_tmp', validate=False)
-                key.set_contents_from_string(data['json'])
+                key.set_contents_from_string(tpl.json)
                 try:
                     self.cfn.validate_template(template_url='https://balanced-cfn-us-east-1.s3.amazonaws.com/validation_tmp')
                 except boto.exception.BotoServerError, e:
                     if e.status != 400:
                         raise
+                    print("{} error: {}".format(tpl.name, e.message))
                     error = True
-                    print("{} error: {}".format(name, e.message))
                     continue
                 finally:
                     key.delete()
             if not quiet:
-                print("{0} ok".format(name))
+                print("{0} ok".format(tpl.name))
         if error:
             raise ValueError('Errors detected')
 
     def show(self, name):
-        data = self._get_template(name)
-        if'error' in data:
-            print(''.join(traceback.format_exception(*data['error'])), file=sys.stderr)
+        tpl = self._get_template(name)
+        if tpl.error:
+            print(''.join(traceback.format_exception(*tpl.error)), file=sys.stderr)
         else:
-            print(data['json'])
+            print(tpl.json)
 
-    def sync(self):
-        self.validate(quiet=True) # Make sure all templates are good
-        for name in self.templates:
-            print('Uploading {}'.format(name), end='')
+    def sync(self, names=None):
+        self.validate(names, quiet=True) # Make sure the template(s) are good
+        for tpl in self._get_templates(names):
+            print('Uploading {}'.format(tpl.name), end='')
             for region in self.REGIONS:
                 print(' {}'.format(region), end='')
                 bucket = self.s3.get_bucket('balanced-cfn-{0}'.format(region))
-                key = bucket.get_key(self.templates[name]['s3_key'], validate=False)
-                key.set_contents_from_string(self.templates[name]['json'])
+                key = bucket.get_key(tpl.s3_key, validate=False)
+                key.set_contents_from_string(tpl.json)
             print()
 
     def update(self, stack_name, template_name=None, params={}):
@@ -155,10 +157,10 @@ class Brix(object):
         if not template_name:
             raise ValueError('Template name for stack {} is required'.format(stack_name))
         print()
-        data = self._get_template(template_name)
+        tpl = self._get_template(template_name)
         getattr(self.cfn, operation)(
             stack_name=stack_name,
-            template_url='https://balanced-cfn-{}.s3.amazonaws.com/{}'.format(self.region, data['s3_key']),
+            template_url='https://balanced-cfn-{}.s3.amazonaws.com/{}'.format(self.region, tpl.s3_key),
             capabilities=['CAPABILITY_IAM'],
             parameters=params.items(),
             **kwargs)
@@ -209,47 +211,17 @@ class Brix(object):
         for line in difflib.unified_diff(stack_template.splitlines(), template.splitlines(), fromfile=stack_name, tofile=template_name, lineterm=''):
             print(line)
 
-    def _load_templates(self):
-        """Load all known templates and compute some data about them."""
-        templates = {}
-        # HAXXXXXX :-(
-        from templates import base
-        base.Stack.TEMPLATES = templates
-        for name in reversed(self.TEMPLATES):
-            template_data = {'name': name}
-            try:
-                template_data['class'] = self._load_template(name)
-                template_data['json'] = template_data['class']().to_json()
-                template_data['sha1'] = hashlib.sha1(template_data['json']).hexdigest()
-                template_data['s3_key'] = 'templates/{}-{}.json'.format(name, template_data['sha1'])
-            except Exception:
-                template_data['error'] = sys.exc_info()
-            templates[name] = template_data
-        return collections.OrderedDict((name, templates[name]) for name in self.TEMPLATES)
-
-    def _load_template(self, name):
-        """Given a module name, return the template class."""
-        # Mahmoud, be mad ;-)
-        mod = importlib.import_module('templates.{0}'.format(name), __package__)
-        templates = {}
-        def massage_name(name):
-            return name.lower().replace('_', '')
-        for key, value in mod.__dict__.iteritems():
-            if isinstance(value, type) and issubclass(value, troposphere.Template) and not key[0] == '_' and key != 'Template':
-                templates[massage_name(key)] = value
-        template_class = templates.get(massage_name(name), templates.get(massage_name(name)+'template'))
-        if not template_class:
-            raise ValueError('Unable to find a template in module {}'.format(name))
-        return template_class
+    def _get_templates(self, names):
+        if names:
+            return [self._get_template(name) for name in names]
+        else:
+            return self.templates.itervalues()
 
     def _get_template(self, name):
-        """Return the data for a given template name."""
-        if name in self.templates:
+        try:
             return self.templates[name]
-        elif 'balanced_{}'.format(name) in self.templates:
-            return self.templates['balanced_{}'.format(name)]
-        else:
-            raise ValueError('Unknown template {}'.format(name))
+        except KeyError:
+            ValueError('Unknown template {}'.format(name))
 
     def _cfn_iterate(self, fn):
         first = True
@@ -267,11 +239,11 @@ def main():
     app = Brix(args['--region'])
     try:
         if args['validate']:
-            app.validate(quiet=args['--quiet'], full=args['--full'])
+            app.validate(args['<template>'], quiet=args['--quiet'], full=args['--full'])
         elif args['show']:
             app.show(args['<name>'])
         elif args['sync']:
-            app.sync()
+            app.sync(args['<template>'])
         elif args['stacks']:
             app.stacks()
         elif args['update']:
@@ -283,11 +255,13 @@ def main():
                 else:
                     return (s, '1')
             params = dict(parse_param(s) for s in args['--param'])
-            app.update(args['<stack>'], args['<template>'], params)
+            template = args['<template>'][0] if args['<template>'] else None
+            app.update(args['<stack>'], template, params)
         elif args['events']:
             app.events(args['<stack>'], not args['--no-recurse'])
         elif args['diff']:
-            app.diff(args['<stack>'], args['<template>'])
+            template = args['<template>'][0] if args['<template>'] else None
+            app.diff(args['<stack>'], template)
     except ValueError, e:
         print(e.message, file=sys.stderr)
         sys.exit(1)
