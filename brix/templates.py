@@ -78,7 +78,7 @@ class Template(object):
             locals_ = {}
             exec(code, {}, locals_)
         finally:
-            sys.path.pop(0)
+            sys.path.remove(load_path)
         # Find the template object
         self.template = locals_.get('template')
         if not self.template:
