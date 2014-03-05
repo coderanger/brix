@@ -18,13 +18,15 @@
 
 from ._base import BaseTemplate
 
+# Make sure that symbols aren't deleted
+S = 'String'
 
 class TemplateB(BaseTemplate):
     """A template that extends."""
 
     def param_Bar(self):
         """Extended parameter."""
-        return {'Type': 'String'}
+        return {'Type': S}
 
 
 template = TemplateB()

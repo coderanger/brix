@@ -18,6 +18,7 @@
 
 import collections
 import hashlib
+import importlib
 import json
 import os
 import sys
@@ -54,7 +55,7 @@ class TemplateLibrary(collections.OrderedDict):
 
 class Template(object):
     def __init__(self, path):
-        self.path = path
+        self.path = os.path.abspath(path)
         self.name, ext = os.path.splitext(os.path.basename(path))
         self.error = None
         load_fn = {
@@ -71,24 +72,22 @@ class Template(object):
             self.error = sys.exc_info()
 
     def _load_py(self):
-        # Run the template code
-        locals_ = {}
         old_path = sys.path[:]
         old_mods = sys.modules.copy()
         try:
-            sys.path.insert(0, os.path.dirname(self.path))
-            with open(self.path, 'rb') as f:
-                code = compile(f.read(), self.path, 'exec')
-            exec(code, {}, locals_)
+            load_path = os.path.dirname(os.path.dirname(self.path))
+            pkg_name = os.path.basename(os.path.dirname(self.path))
+            sys.path.insert(0, load_path)
+            mod = importlib.import_module('{}.{}'.format(pkg_name, self.name))
+            # Find the template object
+            self.template = getattr(mod, 'template', None)
+            if not self.template:
+                raise ValueError('Unable to find a template when loading {}'.format(self.name))
+            self.json = self.template.to_json()
         finally:
             sys.path[:] = old_path
             sys.modules.clear()
             sys.modules.update(old_mods)
-        # Find the template object
-        self.template = locals_.get('template')
-        if not self.template:
-            raise ValueError('Unable to find a template when loading {}'.format(self.name))
-        self.json = self.template.to_json()
 
     def _load_json(self):
         """Load a template from a JSON file."""
