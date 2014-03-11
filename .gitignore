@@ -5,3 +5,4 @@ packer/balanced-aws.key
 *.pyc
 build/
 dist/
+*iml
