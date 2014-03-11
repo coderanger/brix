@@ -61,7 +61,9 @@
                 "apt-get --yes update",
                 "apt-get --yes install python-pip xfs xfsprogs mdadm",
                 "pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
-                "pip install awscli"
+                "pip install awscli",
+                "curl https://stedolan.github.io/jq/download/linux64/jq > /usr/bin/jq",
+                "chmod 755 /usr/bin/jq"
             ]
         },
         {
