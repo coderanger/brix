@@ -1,62 +1,72 @@
 {
-  "variables": {
-    "aws_access_key_id": "{{env `AWS_ACCESS_KEY_ID`}}",
-    "aws_secret_access_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
-    "aws_account_id": "4819-1673-9571",
-    "s3_bucket": "balanced-amis",
-    "x509_cert_path": "{{pwd}}/balanced-aws.crt",
-    "x509_key_path": "{{pwd}}/balanced-aws.key"
-  },
-  "builders": [
-    {
-      "type": "amazon-instance",
-      "access_key": "{{user `aws_access_key_id`}}",
-      "secret_key": "{{user `aws_secret_access_key`}}",
-      "account_id": "{{user `aws_account_id`}}",
-      "s3_bucket": "{{user `s3_bucket`}}",
-      "region": "us-east-1",
-      "ami_regions": ["us-west-1", "us-west-2"],
-      "source_ami": "ami-23447f4a",
-      "instance_type": "m1.small",
-      "ssh_username": "ubuntu",
-      "ami_name": "Balanced Chef-Client Ubuntu 12.04 (instance store) {{isotime | clean_ami_name}}",
-      "x509_cert_path": "{{user `x509_cert_path`}}",
-      "x509_key_path": "{{user `x509_key_path`}}",
-      "bundle_upload_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --location {{.Region}} --retry",
-      "bundle_vol_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-bundle-vol -k {{.KeyPath}} -u {{.AccountId}} -c {{.CertPath}} -r {{.Architecture}} -e {{.PrivatePath}}/* -d {{.Destination}} -p {{.Prefix}} --batch --no-filter"
-    }
-  ],
-  "provisioners": [
-    {
-      "type": "shell",
-      "inline": [
-        "set -e -x",
-        "sleep 60 # Wait for init scripts et al to finish"
-      ]
+    "variables": {
+        "aws_access_key_id": "{{env `AWS_ACCESS_KEY_ID`}}",
+        "aws_secret_access_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
+        "aws_account_id": "4819-1673-9571",
+        "s3_bucket": "balanced-amis",
+        "x509_cert_path": "{{pwd}}/balanced-aws.crt",
+        "x509_key_path": "{{pwd}}/balanced-aws.key"
     },
-    {
-      "type": "file",
-      "source": "validation.pem",
-      "destination": "/tmp/validation.pem"
-    },
-    {
-      "type": "file",
-      "source": "client.rb",
-      "destination": "/tmp/client.rb"
-    },
-    {
-      "type": "file",
-      "source": "client-bootstrap.sh",
-      "destination": "/tmp/bootstrap.sh"
-    },
-    {
-      "type": "file",
-      "source": "cacert.pem",
-      "destination": "/tmp/cacert.pem"
-    },
-    {
-      "type": "shell",
-      "script": "init.sh"
-    }
-  ]
+    "builders": [
+        {
+            "type": "amazon-instance",
+            "access_key": "{{user `aws_access_key_id`}}",
+            "secret_key": "{{user `aws_secret_access_key`}}",
+            "account_id": "{{user `aws_account_id`}}",
+            "s3_bucket": "{{user `s3_bucket`}}",
+            "region": "us-east-1",
+            "ami_regions": ["us-west-1", "us-west-2"],
+            "source_ami": "ami-23447f4a",
+            "instance_type": "m1.small",
+            "ssh_username": "ubuntu",
+            "ami_name": "Balanced Chef-Client Ubuntu 12.04 (instance store) {{isotime | clean_ami_name}}",
+            "x509_cert_path": "{{user `x509_cert_path`}}",
+            "x509_key_path": "{{user `x509_key_path`}}",
+            "bundle_upload_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --location {{.Region}} --retry",
+            "bundle_vol_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-bundle-vol -k {{.KeyPath}} -u {{.AccountId}} -c {{.CertPath}} -r {{.Architecture}} -e {{.PrivatePath}}/* -d {{.Destination}} -p {{.Prefix}} --batch --no-filter"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": [
+                "set -e -x",
+                "sleep 60 # Wait for init scripts et al to finish"
+            ]
+        },
+        {
+            "type": "file",
+            "source": "validation.pem",
+            "destination": "/tmp/validation.pem"
+        },
+        {
+            "type": "file",
+            "source": "client.rb",
+            "destination": "/tmp/client.rb"
+        },
+        {
+            "type": "file",
+            "source": "client-bootstrap.sh",
+            "destination": "/tmp/bootstrap.sh"
+        },
+        {
+            "type": "file",
+            "source": "cacert.pem",
+            "destination": "/tmp/cacert.pem"
+        },
+        {
+            "type": "shell",
+            "inline": [
+                "set -e -x",
+                "apt-get --yes update",
+                "apt-get --yes install python-pip xfs xfsprogs mdadm",
+                "pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
+                "pip install awscli"
+            ]
+        },
+        {
+            "type": "shell",
+            "script": "init.sh"
+        }
+    ]
 }
