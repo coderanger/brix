@@ -17,7 +17,7 @@
             "region": "us-east-1",
             "ami_regions": ["us-west-1", "us-west-2"],
             "source_ami": "ami-23447f4a",
-            "instance_type": "m1.small",
+            "instance_type": "m3.xlarge",
             "ssh_username": "ubuntu",
             "ami_name": "Balanced Chef-Client Ubuntu 12.04 (instance store) {{isotime | clean_ami_name}}",
             "x509_cert_path": "{{user `x509_cert_path`}}",
@@ -55,16 +55,14 @@
             "destination": "/tmp/cacert.pem"
         },
         {
-            "type": "shell",
-            "inline": [
-                "set -e -x",
-                "apt-get --yes update",
-                "apt-get --yes install python-pip xfs xfsprogs mdadm",
-                "pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
-                "pip install awscli",
-                "curl https://stedolan.github.io/jq/download/linux64/jq > /usr/bin/jq",
-                "chmod 755 /usr/bin/jq"
-            ]
+            "type": "file",
+            "source": "aws-cfn-bootstrap-20140311.tar.gz",
+            "destination": "/tmp/aws-cfn-bootstrap-20140311.tar.gz"
+        },
+        {
+            "type": "file",
+            "source": "jq",
+            "destination": "/tmp/jq"
         },
         {
             "type": "shell",

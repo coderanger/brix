@@ -22,6 +22,7 @@ curl -L https://www.opscode.com/chef/install.sh | sudo bash
 
 # Install ec2-ami-tools
 sudo apt-get update -y
+sudo apt-get upgrade -y
 sudo apt-get install -y unzip
 curl -o /tmp/ec2-ami-tools.zip http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools.zip
 # The Amazon zip file has recoverable errors
@@ -72,3 +73,14 @@ sudo chmod 600 /etc/chef/ohai/hints/ec2.json
 sudo mv /tmp/bootstrap.sh /opt
 sudo chown root:root /opt/bootstrap.sh
 sudo chmod 744 /opt/bootstrap.sh
+
+# more bootstrapping
+sudo apt-get -y install python-pip xfs xfsprogs
+sudo pip install /tmp/aws-cfn-bootstrap-20140311.tar.gz
+sudo pip install awscli
+sudo mv /tmp/jq /usr/bin/
+sudo chmod 755 /usr/bin/jq
+
+# this is really slow to build on instances, let's build it here such performance
+sudo apt-get -y install ruby1.9.1-dev build-essential
+sudo gem install fog
