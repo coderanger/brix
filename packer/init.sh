@@ -82,5 +82,7 @@ sudo mv /tmp/jq /usr/bin/
 sudo chmod 755 /usr/bin/jq
 
 # this is really slow to build on instances, let's build it here such performance
-sudo apt-get -y install ruby1.9.1-dev build-essential
-sudo gem install fog
+sudo mv /tmp/gemrc /etc/gemrc
+sudo chmod 444 /etc/gemrc
+sudo apt-get -y install build-essential
+sudo /opt/chef/embedded/bin/gem install fog
