@@ -22,7 +22,7 @@
             "ami_name": "Balanced Chef-Client Ubuntu 12.04 (instance store) {{isotime | clean_ami_name}}",
             "x509_cert_path": "{{user `x509_cert_path`}}",
             "x509_key_path": "{{user `x509_key_path`}}",
-            "bundle_upload_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --location {{.Region}} --retry",
+            "bundle_upload_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-upload-bundle -b {{.BucketName}} -m {{.ManifestPath}} -a {{.AccessKey}} -s {{.SecretKey}} -d {{.BundleDirectory}} --batch --retry",
             "bundle_vol_command": "sudo -n env PATH=/opt/chef/embedded/bin:$PATH EC2_AMITOOL_HOME=/opt/ec2-ami-tools /opt/ec2-ami-tools/bin/ec2-bundle-vol -k {{.KeyPath}} -u {{.AccountId}} -c {{.CertPath}} -r {{.Architecture}} -e {{.PrivatePath}}/* -d {{.Destination}} -p {{.Prefix}} --batch --no-filter"
         }
     ],
